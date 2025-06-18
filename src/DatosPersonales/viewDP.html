@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Datos Personales</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Encabezado -->
+        <header class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">Gestión de Datos Personales</h1>
+            <p class="text-gray-600">Administra tu información personal y profesional</p>
+        </header>
+
+        <!-- Botón para abrir el modal de creación -->
+        <button onclick="abrirModalCrear()" class="mb-6 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center">
+            <i class="fas fa-plus mr-2"></i> Nuevo Registro
+        </button>
+
+        <!-- Lista de registros -->
+        <div class="bg-white rounded-lg shadow overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Profesión</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Teléfono</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaDatos" class="bg-white divide-y divide-gray-200">
+                        <!-- Los datos se cargarán aquí dinámicamente -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Crear/Editar -->
+    <div id="modalFormulario" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-lg w-full max-w-2xl p-6 mx-4">
+            <div class="flex justify-between items-center mb-4">
+                <h2 id="modalTitulo" class="text-xl font-bold text-gray-800">Nuevo Registro</h2>
+                <button onclick="cerrarModal()" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <form id="formDatos" class="space-y-4">
+                <input type="hidden" id="id">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="nombre" class="block text-sm font-medium text-gray-700">Nombre</label>
+                        <input type="text" id="nombre" name="nombre" required
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label for="profesion" class="block text-sm font-medium text-gray-700">Profesión</label>
+                        <input type="text" id="profesion" name="profesion" required
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label for="descripcion" class="block text-sm font-medium text-gray-700">Descripción</label>
+                        <textarea id="descripcion" name="descripcion" rows="3"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"></textarea>
+                    </div>
+                    <div>
+                        <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
+                        <input type="email" id="email" name="email" required
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label for="telefono" class="block text-sm font-medium text-gray-700">Teléfono</label>
+                        <input type="tel" id="telefono" name="telefono"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label for="direccion" class="block text-sm font-medium text-gray-700">Dirección</label>
+                        <input type="text" id="direccion" name="direccion"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label for="foto_perfil" class="block text-sm font-medium text-gray-700">Foto de Perfil</label>
+                        <input type="file" id="foto_perfil" name="foto_perfil" accept="image/*"
+                            class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                    </div>
+                    <div>
+                        <label for="cv" class="block text-sm font-medium text-gray-700">CV (PDF)</label>
+                        <input type="file" id="cv" name="cv" accept=".pdf"
+                            class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                    </div>
+                </div>
+                <div class="flex justify-end space-x-3 pt-4">
+                    <button type="button" onclick="cerrarModal()"
+                        class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        Cancelar
+                    </button>
+                    <button type="submit"
+                        class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        Guardar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal para Confirmar Eliminación -->
+    <div id="modalEliminar" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div class="flex flex-col items-center">
+                <div class="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mb-4">
+                    <i class="fas fa-exclamation-triangle text-red-600 text-2xl"></i>
+                </div>
+                <h3 class="text-lg font-medium text-gray-900 mb-2">¿Estás seguro?</h3>
+                <p class="text-gray-500 text-center mb-6">Esta acción no se puede deshacer. Se eliminarán los datos de forma permanente.</p>
+                <div class="flex justify-center space-x-3 w-full">
+                    <button onclick="cerrarModalEliminar()"
+                        class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
+                        Cancelar
+                    </button>
+                    <button id="confirmarEliminar"
+                        class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                        Eliminar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Variable global para mantener el registro actual
+        let registroActual = null;
+        const API_URL = 'http://localhost:3000/api'; // Asegúrate de que esta URL sea correcta
+
+        // Cargar datos al iniciar
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('DOM completamente cargado, iniciando carga de datos...');
+            cargarDatos();
+        });
+
+        // Manejador del formulario
+        document.getElementById('formDatos').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const datos = Object.fromEntries(formData.entries());
+            
+            // Manejar archivos
+            const fotoInput = document.getElementById('foto_perfil');
+            const cvInput = document.getElementById('cv');
+            
+            if (fotoInput.files[0]) {
+                datos.foto_perfil = await fileToBase64(fotoInput.files[0]);
+            }
+            
+            if (cvInput.files[0]) {
+                datos.cv = await fileToBase64(cvInput.files[0]);
+            }
+            
+            if (registroActual) {
+                datos.id = registroActual.id;
+                await actualizarDatosPersonales(datos);
+            } else {
+                await crearDatosPersonales(datos);
+            }
+            
+            // Recargar datos y cerrar modal
+            await cargarDatos();
+            cerrarModal();
+        });
+
+        // Función para cargar los datos en la tabla
+        async function cargarDatos() {
+            try {
+                const tabla = document.getElementById('tablaDatos');
+                if (!tabla) {
+                    console.error('No se encontró el elemento con id "tablaDatos"');
+                    return;
+                }
+                
+                tabla.innerHTML = '<tr><td colspan="5" class="px-6 py-4 text-center text-gray-500">Cargando datos...</td></tr>';
+                
+                console.log('Solicitando datos a:', `${API_URL}/datos-personales`);
+                const response = await fetch(`${API_URL}/datos-personales`);
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Error en la respuesta:', response.status, errorText);
+                    throw new Error(`Error al cargar los datos: ${response.status} ${response.statusText}`);
+                }
+                
+                const datos = await response.json();
+                console.log('Datos recibidos:', datos);
+                
+                // Limpiar la tabla
+                tabla.innerHTML = '';
+
+                if (!datos || datos.length === 0) {
+                    const fila = document.createElement('tr');
+                    fila.innerHTML = `
+                        <td colspan="5" class="px-6 py-4 text-center text-gray-500">
+                            No hay registros para mostrar
+                        </td>
+                    `;
+                    tabla.appendChild(fila);
+                    return;
+                }
+                
+                // Crear filas para cada registro
+                datos.forEach(registro => {
+                    const fila = document.createElement('tr');
+                    fila.className = 'hover:bg-gray-50';
+                    fila.innerHTML = `
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${registro.nombre || ''}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${registro.profesion || ''}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${registro.email || ''}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${registro.telefono || ''}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <button onclick="editarRegistro(${JSON.stringify(registro).replace(/"/g, '&quot;')})" class="text-blue-600 hover:text-blue-900 mr-3">
+                                <i class="fas fa-edit"></i> Editar
+                            </button>
+                            <button onclick="solicitarEliminar(${registro.id})" class="text-red-600 hover:text-red-900">
+                                <i class="fas fa-trash-alt"></i> Eliminar
+                            </button>
+                        </td>
+                    `;
+                    tabla.appendChild(fila);
+                });
+            } catch (error) {
+                console.error('Error al cargar los datos:', error);
+                alert('Error al cargar los datos. Asegúrate de que el servidor esté en ejecución.');
+            }
+        }
+
+        // Funciones para manejar los modales
+        function abrirModalCrear() {
+            registroActual = null;
+            document.getElementById('modalTitulo').textContent = 'Nuevo Registro';
+            document.getElementById('formDatos').reset();
+            document.getElementById('id').value = '';
+            document.getElementById('modalFormulario').classList.remove('hidden');
+            document.getElementById('modalFormulario').classList.add('flex');
+        }
+
+        function editarRegistro(registro) {
+            registroActual = registro;
+            document.getElementById('modalTitulo').textContent = 'Editar Registro';
+            
+            // Llenar el formulario con los datos del registro
+            document.getElementById('id').value = registro.id || '';
+            document.getElementById('nombre').value = registro.nombre || '';
+            document.getElementById('profesion').value = registro.profesion || '';
+            document.getElementById('descripcion').value = registro.descripcion || '';
+            document.getElementById('email').value = registro.email || '';
+            document.getElementById('telefono').value = registro.telefono || '';
+            document.getElementById('direccion').value = registro.direccion || '';
+            
+            // Mostrar el modal
+            document.getElementById('modalFormulario').classList.remove('hidden');
+            document.getElementById('modalFormulario').classList.add('flex');
+        }
+
+        function cerrarModal() {
+            document.getElementById('modalFormulario').classList.add('hidden');
+            document.getElementById('modalFormulario').classList.remove('flex');
+        }
+
+        function solicitarEliminar(id) {
+            registroActual = { id };
+            document.getElementById('modalEliminar').classList.remove('hidden');
+            document.getElementById('modalEliminar').classList.add('flex');
+        }
+
+        function cerrarModalEliminar() {
+            document.getElementById('modalEliminar').classList.add('hidden');
+            document.getElementById('modalEliminar').classList.remove('flex');
+        }
+
+        // Configurar el botón de confirmar eliminación
+        document.getElementById('confirmarEliminar').addEventListener('click', async () => {
+            if (registroActual && registroActual.id) {
+                try {
+                    await eliminarDatosPersonales(registroActual.id);
+                    await cargarDatos();
+                    cerrarModalEliminar();
+                } catch (error) {
+                    console.error('Error al eliminar el registro:', error);
+                    alert('Error al eliminar el registro. Por favor, intente nuevamente.');
+                }
+            }
+        });
+
+        // Funciones para interactuar con la API
+        async function crearDatosPersonales(datos) {
+            try {
+                const response = await fetch(`${API_URL}/datos-personales`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(datos)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Error al crear el registro');
+                }
+
+                const resultado = await response.json();
+                return resultado.id;
+            } catch (error) {
+                console.error('Error al crear datos personales:', error);
+                throw error;
+            }
+        }
+
+        async function actualizarDatosPersonales(datos) {
+            try {
+                const id = datos.id;
+                delete datos.id; // Eliminar el ID del objeto de datos
+                
+                const response = await fetch(`${API_URL}/datos-personales/${id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(datos)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Error al actualizar el registro');
+                }
+
+                return true;
+            } catch (error) {
+                console.error('Error al actualizar datos personales:', error);
+                throw error;
+            }
+        }
+
+        async function eliminarDatosPersonales(id) {
+            try {
+                const response = await fetch(`${API_URL}/datos-personales/${id}`, {
+                    method: 'DELETE'
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Error al eliminar el registro');
+                }
+
+                return true;
+            } catch (error) {
+                console.error('Error al eliminar datos personales:', error);
+                throw error;
+            }
+        }
+
+        // Función auxiliar para convertir archivos a base64
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result.split(',')[1]);
+                reader.onerror = error => reject(error);
+            });
+        }
+    </script>
+</body>
+</html>
