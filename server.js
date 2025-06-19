@@ -173,25 +173,76 @@ router.post('/api/datos-personales', async (req, res) => {
 // Actualizar un registro
 router.put('/api/datos-personales/:id', async (req, res) => {
     try {
-        const { nombre, profesion, descripcion, email, telefono, direccion } = req.body;
+        const { nombre, profesion, descripcion, email, telefono, direccion, foto_perfil, cv } = req.body;
         
+        // Iniciar la construcción de la consulta SQL
+        let query = 'UPDATE datos_personales SET ';
+        const inputs = [];
+        
+        // Agregar campos básicos
+        const fields = [
+            { name: 'nombre', value: nombre, type: sql.VarChar(100) },
+            { name: 'profesion', value: profesion, type: sql.VarChar(100) },
+            { name: 'descripcion', value: descripcion, type: sql.Text },
+            { name: 'email', value: email, type: sql.VarChar(100) },
+            { name: 'telefono', value: telefono, type: sql.VarChar(30) },
+            { name: 'direccion', value: direccion, type: sql.VarChar(200) }
+        ];
+        
+        // Filtrar solo los campos que tienen valor
+        const validFields = fields.filter(field => field.value !== undefined && field.value !== null);
+        
+        // Construir la parte SET de la consulta SQL
+        const setClauses = [];
+        validFields.forEach((field, index) => {
+            const paramName = `param${index}`;
+            setClauses.push(`${field.name} = @${paramName}`);
+            inputs.push({ name: paramName, value: field.value, type: field.type });
+        });
+        
+        // Manejar la foto de perfil si está presente
+        if (foto_perfil) {
+            // Convertir base64 a buffer
+            const matches = foto_perfil.match(/^data:([A-Za-z-+/]+);base64,(.+)$/);
+            if (matches && matches.length === 3) {
+                const buffer = Buffer.from(matches[2], 'base64');
+                setClauses.push('foto_perfil = @fotoParam');
+                inputs.push({ name: 'fotoParam', value: buffer, type: sql.VarBinary(sql.MAX) });
+            }
+        }
+        
+        // Manejar el CV si está presente
+        if (cv) {
+            // Convertir base64 a buffer
+            const matches = cv.match(/^data:application\/pdf;base64,(.+)$/);
+            if (matches && matches.length === 2) {
+                const buffer = Buffer.from(matches[1], 'base64');
+                setClauses.push('cv = @cvParam');
+                inputs.push({ name: 'cvParam', value: buffer, type: sql.VarBinary(sql.MAX) });
+            }
+        }
+        
+        if (setClauses.length === 0) {
+            return res.status(400).json({ error: 'No se proporcionaron datos para actualizar' });
+        }
+        
+        // Agregar la cláusula WHERE
+        query += setClauses.join(', ') + ' WHERE id = @id';
+        
+        // Agregar el ID a los inputs
+        inputs.push({ name: 'id', value: parseInt(req.params.id), type: sql.Int });
+        
+        // Construir la solicitud
         const pool = await getConnection();
-        const result = await pool.request()
-            .input('id', sql.Int, req.params.id)
-            .input('nombre', sql.VarChar(100), nombre)
-            .input('profesion', sql.VarChar(100), profesion)
-            .input('descripcion', sql.Text, descripcion)
-            .input('email', sql.VarChar(100), email)
-            .input('telefono', sql.VarChar(30), telefono)
-            .input('direccion', sql.VarChar(200), direccion)
-            .query(`UPDATE datos_personales 
-                   SET nombre = @nombre, 
-                       profesion = @profesion, 
-                       descripcion = @descripcion, 
-                       email = @email, 
-                       telefono = @telefono, 
-                       direccion = @direccion 
-                   WHERE id = @id`);
+        const request = pool.request();
+        
+        // Agregar todos los parámetros a la solicitud
+        inputs.forEach(input => {
+            request.input(input.name, input.type, input.value);
+        });
+        
+        // Ejecutar la consulta
+        const result = await request.query(query);
         
         if (result.rowsAffected[0] === 0) {
             return res.status(404).json({ error: 'Registro no encontrado' });

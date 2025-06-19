@@ -152,32 +152,81 @@
         document.getElementById('formDatos').addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            const formData = new FormData(e.target);
-            const datos = Object.fromEntries(formData.entries());
-            
-            // Manejar archivos
-            const fotoInput = document.getElementById('foto_perfil');
-            const cvInput = document.getElementById('cv');
-            
-            if (fotoInput.files[0]) {
-                datos.foto_perfil = await fileToBase64(fotoInput.files[0]);
+            try {
+                const formData = new FormData(e.target);
+                const datos = Object.fromEntries(formData.entries());
+                
+                // Mostrar indicador de carga
+                const submitButton = e.target.querySelector('button[type="submit"]');
+                const originalButtonText = submitButton.innerHTML;
+                submitButton.disabled = true;
+                submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+
+                // Manejar archivos
+                const fotoInput = document.getElementById('foto_perfil');
+                const cvInput = document.getElementById('cv');
+                
+                // Solo procesar la foto si se seleccionó un archivo nuevo
+                if (fotoInput.files[0]) {
+                    datos.foto_perfil = await fileToBase64(fotoInput.files[0]);
+                }
+                
+                // Solo procesar el CV si se seleccionó un archivo nuevo
+                if (cvInput.files[0]) {
+                    datos.cv = await fileToBase64(cvInput.files[0]);
+                }
+                
+                if (registroActual && registroActual.id) {
+                    // Actualizar registro existente
+                    await actualizarDatosPersonales({ ...datos, id: registroActual.id });
+                } else {
+                    // Crear nuevo registro
+                    await crearDatosPersonales(datos);
+                }
+                
+                // Recargar datos y cerrar modal
+                await cargarDatos();
+                cerrarModal();
+                
+                // Mostrar notificación de éxito
+                mostrarNotificacion('¡Datos guardados correctamente!', 'success');
+                
+            } catch (error) {
+                console.error('Error al guardar los datos:', error);
+                mostrarNotificacion('Error al guardar los datos. Por favor, intente nuevamente.', 'error');
+            } finally {
+                // Restaurar el botón
+                if (submitButton) {
+                    submitButton.disabled = false;
+                    submitButton.innerHTML = originalButtonText || 'Guardar';
+                }
             }
-            
-            if (cvInput.files[0]) {
-                datos.cv = await fileToBase64(cvInput.files[0]);
-            }
-            
-            if (registroActual) {
-                datos.id = registroActual.id;
-                await actualizarDatosPersonales(datos);
-            } else {
-                await crearDatosPersonales(datos);
-            }
-            
-            // Recargar datos y cerrar modal
-            await cargarDatos();
-            cerrarModal();
         });
+        
+        // Función para mostrar notificaciones
+        function mostrarNotificacion(mensaje, tipo = 'info') {
+            const tipos = {
+                success: 'bg-green-500',
+                error: 'bg-red-500',
+                warning: 'bg-yellow-500',
+                info: 'bg-blue-500'
+            };
+            
+            const notificacion = document.createElement('div');
+            notificacion.className = `fixed top-4 right-4 text-white px-6 py-3 rounded-md shadow-lg ${tipos[tipo] || tipos.info} transition-all duration-300 transform translate-x-0 opacity-100`;
+            notificacion.textContent = mensaje;
+            
+            document.body.appendChild(notificacion);
+            
+            // Eliminar la notificación después de 5 segundos
+            setTimeout(() => {
+                notificacion.style.transform = 'translateX(120%)';
+                notificacion.style.opacity = '0';
+                setTimeout(() => {
+                    document.body.removeChild(notificacion);
+                }, 300);
+            }, 5000);
+        }
 
         // Función para cargar los datos en la tabla y tarjetas
         async function cargarDatos() {
@@ -266,7 +315,7 @@
                             <div class="text-xs text-gray-400 mt-1">${registro.direccion || 'Sin dirección'}</div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
-                            ${registro.cv ? `
+                            ${registro.has_cv ? `
                                 <button onclick="openCVModal('${API_URL}/datos-personales/${registro.id}/cv')" class="text-blue-600 hover:text-blue-900 flex items-center">
                                     <i class="fas fa-file-pdf mr-1"></i> Ver CV
                                 </button>` : 'No disponible'}
@@ -334,7 +383,7 @@
                             
                             <!-- Acciones -->
                             <div class="mt-4 flex justify-between items-center">
-                                ${registro.cv ? `
+                                ${registro.has_cv ? `
                                     <button onclick="openCVModal('${API_URL}/datos-personales/${registro.id}/cv')" 
                                             class="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center">
                                         <i class="fas fa-file-pdf mr-1"></i> Ver CV
@@ -366,26 +415,118 @@
             document.getElementById('modalTitulo').textContent = 'Nuevo Registro';
             document.getElementById('formDatos').reset();
             document.getElementById('id').value = '';
-            document.getElementById('modalFormulario').classList.remove('hidden');
-            document.getElementById('modalFormulario').classList.add('flex');
-        }
-
-        function editarRegistro(registro) {
-            registroActual = registro;
-            document.getElementById('modalTitulo').textContent = 'Editar Registro';
             
-            // Llenar el formulario con los datos del registro
-            document.getElementById('id').value = registro.id || '';
-            document.getElementById('nombre').value = registro.nombre || '';
-            document.getElementById('profesion').value = registro.profesion || '';
-            document.getElementById('descripcion').value = registro.descripcion || '';
-            document.getElementById('email').value = registro.email || '';
-            document.getElementById('telefono').value = registro.telefono || '';
-            document.getElementById('direccion').value = registro.direccion || '';
+            // Limpiar vistas previas
+            const fotoPreview = document.getElementById('foto_preview');
+            if (fotoPreview) {
+                fotoPreview.remove();
+            }
+            
+            const cvLink = document.querySelector('#cv + a');
+            if (cvLink) {
+                cvLink.remove();
+            }
             
             // Mostrar el modal
             document.getElementById('modalFormulario').classList.remove('hidden');
-            document.getElementById('modalFormulario').classList.add('flex');
+            document.body.style.overflow = 'hidden';
+            
+            // Enfocar el primer campo
+            document.getElementById('nombre').focus();
+        }
+
+        // Función para editar un registro
+        async function editarRegistro(registro) {
+            try {
+                registroActual = registro;
+                document.getElementById('modalTitulo').textContent = 'Editar Registro';
+                
+                // Llenar el formulario con los datos del registro
+                document.getElementById('id').value = registro.id || '';
+                document.getElementById('nombre').value = registro.nombre || '';
+                document.getElementById('profesion').value = registro.profesion || '';
+                document.getElementById('descripcion').value = registro.descripcion || '';
+                document.getElementById('email').value = registro.email || '';
+                document.getElementById('telefono').value = registro.telefono || '';
+                document.getElementById('direccion').value = registro.direccion || '';
+                
+                // Limpiar los inputs de archivo
+                document.getElementById('foto_perfil').value = '';
+                document.getElementById('cv').value = '';
+                
+                // Si hay una foto de perfil, mostrarla
+                if (registro.id) {
+                    // Mostrar la imagen actual si existe
+                    const imgPreview = document.createElement('img');
+                    imgPreview.id = 'foto_preview';
+                    imgPreview.className = 'mt-2 h-20 w-20 object-cover rounded-full';
+                    imgPreview.onerror = function() {
+                        this.style.display = 'none';
+                    };
+                    
+                    // Verificar si ya hay una vista previa y reemplazarla
+                    const existingPreview = document.getElementById('foto_preview');
+                    const fotoContainer = document.getElementById('foto_perfil').parentNode;
+                    
+                    if (existingPreview) {
+                        fotoContainer.removeChild(existingPreview);
+                    }
+                    
+                    // Agregar la nueva vista previa
+                    fotoContainer.appendChild(imgPreview);
+                    
+                    // Cargar la imagen actual
+                    try {
+                        const response = await fetch(`${API_URL}/datos-personales/${registro.id}/foto?t=${Date.now()}`);
+                        if (response.ok) {
+                            const blob = await response.blob();
+                            imgPreview.src = URL.createObjectURL(blob);
+                        } else {
+                            imgPreview.style.display = 'none';
+                        }
+                    } catch (error) {
+                        console.error('Error al cargar la foto de perfil:', error);
+                        imgPreview.style.display = 'none';
+                    }
+                    
+                    // Mostrar el nombre del archivo CV actual si existe
+                    const cvLink = document.createElement('a');
+                    cvLink.href = '#';
+                    cvLink.className = 'text-blue-600 hover:underline text-sm mt-1 block';
+                    cvLink.textContent = 'Ver CV actual';
+                    cvLink.onclick = (e) => {
+                        e.preventDefault();
+                        openCVModal(`${API_URL}/datos-personales/${registro.id}/cv`);
+                    };
+                    
+                    const cvContainer = document.getElementById('cv').parentNode;
+                    const existingCvLink = document.querySelector('#cv + a');
+                    
+                    if (existingCvLink) {
+                        cvContainer.removeChild(existingCvLink);
+                    }
+                    
+                    // Verificar si hay un CV antes de mostrar el enlace
+                    fetch(`${API_URL}/datos-personales/${registro.id}/cv`, { method: 'HEAD' })
+                        .then(response => {
+                            if (response.ok) {
+                                cvContainer.appendChild(cvLink);
+                            }
+                        })
+                        .catch(error => console.error('Error al verificar el CV:', error));
+                }
+                
+                // Mostrar el modal
+                document.getElementById('modalFormulario').classList.remove('hidden');
+                document.body.style.overflow = 'hidden';
+                
+                // Enfocar el primer campo del formulario
+                document.getElementById('nombre').focus();
+                
+            } catch (error) {
+                console.error('Error al cargar los datos para editar:', error);
+                alert('Error al cargar los datos para editar. Por favor, intente nuevamente.');
+            }
         }
 
         function cerrarModal() {
@@ -490,7 +631,26 @@
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
                 reader.readAsDataURL(file);
-                reader.onload = () => resolve(reader.result.split(',')[1]);
+                reader.onload = () => {
+                    // Mostrar vista previa de la imagen si es una imagen
+                    if (file.type.startsWith('image/')) {
+                        const imgPreview = document.createElement('img');
+                        imgPreview.id = 'foto_preview';
+                        imgPreview.src = reader.result;
+                        imgPreview.className = 'mt-2 h-20 w-20 object-cover rounded-full';
+                        
+                        // Reemplazar la vista previa anterior si existe
+                        const existingPreview = document.getElementById('foto_preview');
+                        const fotoContainer = document.getElementById('foto_perfil').parentNode;
+                        
+                        if (existingPreview) {
+                            existingPreview.src = reader.result;
+                        } else {
+                            fotoContainer.appendChild(imgPreview);
+                        }
+                    }
+                    resolve(reader.result);
+                };
                 reader.onerror = error => reject(error);
             });
         }
