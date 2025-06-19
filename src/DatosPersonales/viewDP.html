@@ -217,13 +217,21 @@
                     fila.className = 'hover:bg-gray-50';
                     fila.innerHTML = `
                         <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="h-10 w-10 rounded-full overflow-hidden bg-gray-200">
-                                <img src="/api/datos-personales/${registro.id}/foto" alt="Foto de perfil" 
-                                     class="h-full w-full object-cover" 
-                                     onerror="this.src='https://via.placeholder.com/40?text=No+Imagen'"
-                                     style="max-width: 40px; max-height: 40px;">
-                            </div>
-                        </td>
+                        <div class="h-10 w-10 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center relative">
+                            ${registro.id ? `
+                                <img 
+                                    src="${API_URL}/datos-personales/${registro.id}/foto?t=${new Date().getTime()}" 
+                                    alt="Foto de perfil" 
+                                    class="h-full w-full object-cover" 
+                                    style="max-width: 40px; max-height: 40px; display: none;"
+                                    data-id="${registro.id}"
+                                    onload="this.style.display='block'; this.nextElementSibling?.remove()"
+                                    onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling?.style.display='block'"
+                                >
+                            ` : ''}
+                            <div class="absolute text-xs text-gray-500" ${registro.id ? 'style="display: none;"' : ''}>Sin foto</div>
+                        </div>
+                    </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${registro.nombre || ''}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${registro.profesion || ''}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${registro.email || ''}</td>
@@ -394,6 +402,23 @@
             } else {
                 console.error('ID de registro no proporcionado');
                 alert('No se pudo abrir el CV. ID de registro no proporcionado.');
+            }
+        }
+
+        // Función para verificar si una imagen existe
+        function checkImageExists(imageUrl, callback) {
+            const img = new Image();
+            img.onload = function() { callback(true); };
+            img.onerror = function() { callback(false); };
+            img.src = imageUrl;
+        }
+
+        // Función para manejar la carga de imágenes
+        function handleImageLoad(img) {
+            // Verificar si la imagen se cargó correctamente
+            if (img.complete && img.naturalWidth === 0) {
+                // Si la imagen no se cargó correctamente
+                img.onerror();
             }
         }
     </script>

@@ -79,19 +79,32 @@ router.get('/api/datos-personales/:id/foto', async (req, res) => {
             .query('SELECT foto_perfil FROM datos_personales WHERE id = @id');
         
         if (result.recordset.length === 0 || !result.recordset[0].foto_perfil) {
-            return res.status(404).json({ error: 'Foto no encontrada' });
+            console.log('No se encontró la foto para el ID:', req.params.id);
+            return res.status(404).send('Foto no encontrada');
+        }
+        
+        // Obtener el buffer de la imagen
+        const fotoBuffer = result.recordset[0].foto_perfil;
+        
+        // Verificar si el buffer es válido
+        if (!fotoBuffer || fotoBuffer.length === 0) {
+            console.log('El buffer de la foto está vacío para el ID:', req.params.id);
+            return res.status(404).send('La foto no tiene datos');
         }
         
         // Configurar los encabezados para una imagen
-        const fotoBuffer = result.recordset[0].foto_perfil;
         res.writeHead(200, {
             'Content-Type': 'image/jpeg',
-            'Content-Length': fotoBuffer.length
+            'Content-Length': fotoBuffer.length,
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
         });
+        
+        // Enviar la imagen
         res.end(fotoBuffer);
     } catch (error) {
         console.error(`Error al obtener la foto de perfil con ID ${req.params.id}:`, error);
-        res.status(500).json({ error: 'Error al obtener la foto de perfil' });
+        res.status(500).send('Error al obtener la foto de perfil');
     }
 });
 
