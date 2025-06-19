@@ -26,10 +26,11 @@
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">
                         <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Foto</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Profesión</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Teléfono</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">CV</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
                         </tr>
                     </thead>
@@ -182,7 +183,7 @@
                     return;
                 }
                 
-                tabla.innerHTML = '<tr><td colspan="5" class="px-6 py-4 text-center text-gray-500">Cargando datos...</td></tr>';
+                tabla.innerHTML = '<tr><td colspan="6" class="px-6 py-4 text-center text-gray-500">Cargando datos...</td></tr>';
                 
                 console.log('Solicitando datos a:', `${API_URL}/datos-personales`);
                 const response = await fetch(`${API_URL}/datos-personales`);
@@ -202,7 +203,7 @@
                 if (!datos || datos.length === 0) {
                     const fila = document.createElement('tr');
                     fila.innerHTML = `
-                        <td colspan="5" class="px-6 py-4 text-center text-gray-500">
+                        <td colspan="6" class="px-6 py-4 text-center text-gray-500">
                             No hay registros para mostrar
                         </td>
                     `;
@@ -215,10 +216,24 @@
                     const fila = document.createElement('tr');
                     fila.className = 'hover:bg-gray-50';
                     fila.innerHTML = `
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="h-10 w-10 rounded-full overflow-hidden bg-gray-200">
+                                <img src="/api/datos-personales/${registro.id}/foto" alt="Foto de perfil" 
+                                     class="h-full w-full object-cover" 
+                                     onerror="this.src='https://via.placeholder.com/40?text=No+Imagen'"
+                                     style="max-width: 40px; max-height: 40px;">
+                            </div>
+                        </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${registro.nombre || ''}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${registro.profesion || ''}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${registro.email || ''}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${registro.telefono || ''}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            ${registro.id ? `
+                                <button onclick="verCV(${registro.id})" class="text-blue-600 hover:text-blue-900 flex items-center">
+                                    <i class="fas fa-file-pdf mr-1"></i> Ver CV
+                                </button>
+                            ` : 'No disponible'}
+                        </td>
                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                             <button onclick="editarRegistro(${JSON.stringify(registro).replace(/"/g, '&quot;')})" class="text-blue-600 hover:text-blue-900 mr-3">
                                 <i class="fas fa-edit"></i> Editar
@@ -369,6 +384,17 @@
                 reader.onload = () => resolve(reader.result.split(',')[1]);
                 reader.onerror = error => reject(error);
             });
+        }
+
+        // Función para abrir el CV en una nueva pestaña
+        function verCV(id) {
+            if (id) {
+                // Abrir el CV en una nueva pestaña
+                window.open(`${API_URL}/datos-personales/${id}/cv`, '_blank');
+            } else {
+                console.error('ID de registro no proporcionado');
+                alert('No se pudo abrir el CV. ID de registro no proporcionado.');
+            }
         }
     </script>
 </body>

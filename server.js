@@ -22,11 +22,17 @@ app.use(express.urlencoded({ extended: true }));
 
 // Servir archivos estáticos
 app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'src')));
 
 // Middleware para logging de solicitudes
 app.use((req, res, next) => {
     console.log(`${new Date().toISOString()} - ${req.method} ${req.originalUrl}`);
     next();
+});
+
+// Ruta raíz
+app.get('/', (req, res) => {
+    res.redirect('/DatosPersonales/viewDP.html');
 });
 
 // Rutas API
@@ -51,7 +57,7 @@ router.get('/api/datos-personales/:id', async (req, res) => {
         const pool = await getConnection();
         const result = await pool.request()
             .input('id', sql.Int, req.params.id)
-            .query('SELECT * FROM datos_personales WHERE id = @id');
+            .query('SELECT id, nombre, profesion, descripcion, email, telefono, direccion FROM datos_personales WHERE id = @id');
         
         if (result.recordset.length === 0) {
             return res.status(404).json({ error: 'Registro no encontrado' });
@@ -61,6 +67,57 @@ router.get('/api/datos-personales/:id', async (req, res) => {
     } catch (error) {
         console.error(`Error al obtener datos personales con ID ${req.params.id}:`, error);
         res.status(500).json({ error: 'Error al obtener el registro' });
+    }
+});
+
+// Obtener la foto de perfil
+router.get('/api/datos-personales/:id/foto', async (req, res) => {
+    try {
+        const pool = await getConnection();
+        const result = await pool.request()
+            .input('id', sql.Int, req.params.id)
+            .query('SELECT foto_perfil FROM datos_personales WHERE id = @id');
+        
+        if (result.recordset.length === 0 || !result.recordset[0].foto_perfil) {
+            return res.status(404).json({ error: 'Foto no encontrada' });
+        }
+        
+        // Configurar los encabezados para una imagen
+        const fotoBuffer = result.recordset[0].foto_perfil;
+        res.writeHead(200, {
+            'Content-Type': 'image/jpeg',
+            'Content-Length': fotoBuffer.length
+        });
+        res.end(fotoBuffer);
+    } catch (error) {
+        console.error(`Error al obtener la foto de perfil con ID ${req.params.id}:`, error);
+        res.status(500).json({ error: 'Error al obtener la foto de perfil' });
+    }
+});
+
+// Obtener el CV
+router.get('/api/datos-personales/:id/cv', async (req, res) => {
+    try {
+        const pool = await getConnection();
+        const result = await pool.request()
+            .input('id', sql.Int, req.params.id)
+            .query('SELECT cv FROM datos_personales WHERE id = @id');
+        
+        if (result.recordset.length === 0 || !result.recordset[0].cv) {
+            return res.status(404).json({ error: 'CV no encontrado' });
+        }
+        
+        // Configurar los encabezados para un PDF
+        const cvBuffer = result.recordset[0].cv;
+        res.writeHead(200, {
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': 'inline; filename=CV.pdf',
+            'Content-Length': cvBuffer.length
+        });
+        res.end(cvBuffer);
+    } catch (error) {
+        console.error(`Error al obtener el CV con ID ${req.params.id}:`, error);
+        res.status(500).json({ error: 'Error al obtener el CV' });
     }
 });
 
