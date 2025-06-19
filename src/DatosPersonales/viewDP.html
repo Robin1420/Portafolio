@@ -148,33 +148,31 @@
             cargarDatos();
         });
 
-        // Manejador del formulario
+        // Manejador del formulario - SOLO TEXTO
         document.getElementById('formDatos').addEventListener('submit', async (e) => {
             e.preventDefault();
             
+            // Obtener el botón de envío al inicio para que esté disponible en el bloque finally
+            const submitButton = e.target.querySelector('button[type="submit"]');
+            const originalButtonText = submitButton.innerHTML;
+            
             try {
+                // Obtener solo los campos de texto del formulario
                 const formData = new FormData(e.target);
-                const datos = Object.fromEntries(formData.entries());
+                const datos = {
+                    nombre: formData.get('nombre'),
+                    profesion: formData.get('profesion'),
+                    descripcion: formData.get('descripcion'),
+                    email: formData.get('email'),
+                    telefono: formData.get('telefono'),
+                    direccion: formData.get('direccion')
+                };
+                
+                console.log('Datos a enviar (solo texto):', datos);
                 
                 // Mostrar indicador de carga
-                const submitButton = e.target.querySelector('button[type="submit"]');
-                const originalButtonText = submitButton.innerHTML;
                 submitButton.disabled = true;
                 submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
-
-                // Manejar archivos
-                const fotoInput = document.getElementById('foto_perfil');
-                const cvInput = document.getElementById('cv');
-                
-                // Solo procesar la foto si se seleccionó un archivo nuevo
-                if (fotoInput.files[0]) {
-                    datos.foto_perfil = await fileToBase64(fotoInput.files[0]);
-                }
-                
-                // Solo procesar el CV si se seleccionó un archivo nuevo
-                if (cvInput.files[0]) {
-                    datos.cv = await fileToBase64(cvInput.files[0]);
-                }
                 
                 if (registroActual && registroActual.id) {
                     // Actualizar registro existente
@@ -203,6 +201,16 @@
             }
         });
         
+        // Función para convertir archivo a base64
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = error => reject(error);
+            });
+        }
+
         // Función para mostrar notificaciones
         function mostrarNotificacion(mensaje, tipo = 'info') {
             const tipos = {
@@ -335,12 +343,13 @@
                 // Crear tarjetas para móviles
                 datos.forEach(registro => {
                     const card = document.createElement('div');
-                    card.className = 'bg-white rounded-lg shadow-md overflow-hidden border border-gray-100';
+                    card.className = 'bg-white rounded-lg shadow-md overflow-hidden border border-gray-100 mb-4';
                     
                     // Obtener la URL de la foto con timestamp para evitar caché
                     const fotoUrl = registro.id ? 
                         `${API_URL}/datos-personales/${registro.id}/foto?t=${new Date().getTime()}` : '';
                     
+                    // Construir el contenido de la tarjeta
                     card.innerHTML = `
                         <div class="p-4">
                             <div class="flex items-start space-x-4">
@@ -348,16 +357,17 @@
                                 <div class="flex-shrink-0">
                                     <div class="h-16 w-16 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center relative cursor-pointer"
                                          onclick="openFotoModal('${API_URL}/datos-personales/${registro.id}/foto')">
-                                        ${registro.id ? `
-                                            <img 
+                                        ${registro.id ? 
+                                            `<img 
                                                 src="${fotoUrl}"
                                                 alt="Foto de perfil"
                                                 class="h-full w-full object-cover"
                                                 style="display: none;"
-                                                onload="this.style.display='block'; this.nextElementSibling?.remove()"
-                                                onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling?.style.display='block'"
-                                            >
-                                        ` : ''}
+                                                onload="this.style.display='block'; if(this.nextElementSibling) this.nextElementSibling.remove()"
+                                                onerror="this.onerror=null; this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='block'"
+                                            >` : 
+                                            ''
+                                        }
                                         <div class="absolute text-xs text-gray-500" ${registro.id ? 'style="display: none;"' : ''}>Sin foto</div>
                                     </div>
                                 </div>
@@ -383,12 +393,13 @@
                             
                             <!-- Acciones -->
                             <div class="mt-4 flex justify-between items-center">
-                                ${registro.has_cv ? `
-                                    <button onclick="openCVModal('${API_URL}/datos-personales/${registro.id}/cv')" 
+                                ${registro.has_cv ? 
+                                    `<button onclick="openCVModal('${API_URL}/datos-personales/${registro.id}/cv')" 
                                             class="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center">
                                         <i class="fas fa-file-pdf mr-1"></i> Ver CV
-                                    </button>
-                                ` : '<div class="text-sm text-gray-500">Sin CV</div>'}
+                                    </button>` : 
+                                    '<div class="text-sm text-gray-500">Sin CV</div>'
+                                }
                                 
                                 <div class="space-x-2">
                                     <button onclick="editarRegistro(${JSON.stringify(registro).replace(/"/g, '&quot;')})" 
@@ -438,10 +449,15 @@
         // Función para editar un registro
         async function editarRegistro(registro) {
             try {
+                console.log('Editando registro:', registro);
                 registroActual = registro;
                 document.getElementById('modalTitulo').textContent = 'Editar Registro';
                 
                 // Llenar el formulario con los datos del registro
+                const form = document.getElementById('formDatos');
+                form.reset(); // Limpiar el formulario primero
+                
+                // Establecer los valores del formulario
                 document.getElementById('id').value = registro.id || '';
                 document.getElementById('nombre').value = registro.nombre || '';
                 document.getElementById('profesion').value = registro.profesion || '';
@@ -451,8 +467,10 @@
                 document.getElementById('direccion').value = registro.direccion || '';
                 
                 // Limpiar los inputs de archivo
-                document.getElementById('foto_perfil').value = '';
-                document.getElementById('cv').value = '';
+                const fotoInput = document.getElementById('foto_perfil');
+                const cvInput = document.getElementById('cv');
+                fotoInput.value = '';
+                cvInput.value = '';
                 
                 // Si hay una foto de perfil, mostrarla
                 if (registro.id) {
@@ -585,25 +603,39 @@
 
         async function actualizarDatosPersonales(datos) {
             try {
+                console.log('Enviando datos para actualizar:', datos);
                 const id = datos.id;
-                delete datos.id; // Eliminar el ID del objeto de datos
+                if (!id) {
+                    throw new Error('ID de registro no proporcionado');
+                }
+                
+                // Crear una copia de los datos para no modificar el original
+                const datosParaEnviar = { ...datos };
+                delete datosParaEnviar.id; // Eliminar el ID del objeto de datos
                 
                 const response = await fetch(`${API_URL}/datos-personales/${id}`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify(datos)
+                    body: JSON.stringify(datosParaEnviar)
                 });
 
+                const responseData = await response.json();
+                
                 if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || 'Error al actualizar el registro');
+                    console.error('Error en la respuesta del servidor:', responseData);
+                    throw new Error(responseData.error || 'Error al actualizar el registro');
                 }
 
-                return true;
+                console.log('Actualización exitosa:', responseData);
+                return responseData;
             } catch (error) {
-                console.error('Error al actualizar datos personales:', error);
+                console.error('Error al actualizar datos personales:', {
+                    error: error.message,
+                    stack: error.stack,
+                    datos: datos
+                });
                 throw error;
             }
         }
@@ -653,6 +685,36 @@
                 };
                 reader.onerror = error => reject(error);
             });
+        }
+
+        // Funciones para mostrar/ocultar indicador de carga
+        function showLoader(modalId) {
+            const modal = document.getElementById(modalId);
+            if (!modal) return;
+            
+            let loader = modal.querySelector('.loader');
+            if (!loader) {
+                loader = document.createElement('div');
+                loader.className = 'loader absolute inset-0 flex items-center justify-center bg-black bg-opacity-70 z-10';
+                loader.innerHTML = `
+                    <div class="text-white flex flex-col items-center">
+                        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-white mb-2"></div>
+                        <span>Cargando...</span>
+                    </div>
+                `;
+                modal.querySelector('.modal-content').appendChild(loader);
+            }
+            loader.style.display = 'flex';
+        }
+
+        function hideLoader(modalId) {
+            const modal = document.getElementById(modalId);
+            if (!modal) return;
+            
+            const loader = modal.querySelector('.loader');
+            if (loader) {
+                loader.style.display = 'none';
+            }
         }
 
         // Función para verificar si una imagen existe
@@ -1022,14 +1084,6 @@
             const loader = document.getElementById(`${modalId}Loading`);
             if (loader) {
                 loader.style.display = 'none';
-            }
-        }
-
-        // Función para ocultar el indicador de carga
-        function hideLoader(modalId) {
-            const loadingElement = document.getElementById(`${modalId}Loading`);
-            if (loadingElement) {
-                loadingElement.style.display = 'none';
             }
         }
         
