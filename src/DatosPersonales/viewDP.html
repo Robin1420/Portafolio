@@ -1011,12 +1011,20 @@
     <script>
         // Función para mostrar el indicador de carga
         function showLoader(modalId) {
-            const loadingElement = document.getElementById(`${modalId}Loading`);
-            if (loadingElement) {
-                loadingElement.style.display = 'flex';
+            const loader = document.getElementById(`${modalId}Loading`);
+            if (loader) {
+                loader.style.display = 'flex';
             }
         }
-        
+
+        // Función para ocultar el indicador de carga
+        function hideLoader(modalId) {
+            const loader = document.getElementById(`${modalId}Loading`);
+            if (loader) {
+                loader.style.display = 'none';
+            }
+        }
+
         // Función para ocultar el indicador de carga
         function hideLoader(modalId) {
             const loadingElement = document.getElementById(`${modalId}Loading`);
@@ -1148,9 +1156,11 @@
         // Función para abrir el modal del CV
         function openCVModal(cvUrl) {
             const modal = document.getElementById('cvModal');
+            if (!modal) return; // Si no existe el modal, salir de la función
+            
             const pdfViewer = document.getElementById('modalCVPdf');
             const downloadBtn = document.getElementById('downloadCvBtn');
-            const closeButton = modal.querySelector('.close-btn');
+            const closeButton = modal.querySelector('button[onclick*="closeModal"]');
             
             // Guardar el último elemento con foco
             lastFocusedElement = document.activeElement;
@@ -1168,7 +1178,7 @@
             pdfViewer.onload = function() {
                 hideLoader('cv');
                 // Enfocar el botón de cierre una vez que el PDF se cargue
-                closeButton.focus();
+                if (closeButton) closeButton.focus();
             };
             
             pdfViewer.onerror = function() {

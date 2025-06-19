@@ -43,7 +43,7 @@ router.get('/api/datos-personales', async (req, res) => {
     try {
         const pool = await getConnection();
         const result = await pool.request()
-            .query('SELECT * FROM datos_personales');
+            .query('SELECT *, CASE WHEN cv IS NOT NULL THEN 1 ELSE 0 END as has_cv FROM datos_personales');
         res.json(result.recordset);
     } catch (error) {
         console.error('Error al obtener datos personales:', error);
@@ -114,7 +114,7 @@ router.get('/api/datos-personales/:id/cv', async (req, res) => {
         const pool = await getConnection();
         const result = await pool.request()
             .input('id', sql.Int, req.params.id)
-            .query('SELECT cv, nombre, apellido FROM datos_personales WHERE id = @id');
+            .query('SELECT cv, nombre FROM datos_personales WHERE id = @id');
         
         if (result.recordset.length === 0 || !result.recordset[0].cv) {
             return res.status(404).json({ error: 'CV no encontrado' });
