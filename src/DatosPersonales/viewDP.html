@@ -700,10 +700,15 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <p id="fotoModalDesc" class="help-text">Haz clic fuera de la imagen o presiona ESC para cerrar</p>
-                <button onclick="closeModal('fotoModal')" class="btn-download" aria-label="Cerrar ventana de vista previa">
-                    <i class="fas fa-times" aria-hidden="true"></i> Cerrar
-                </button>
+                <p id="fotoModalDesc" class="help-text">Puedes descargar la imagen o cerrar esta ventana</p>
+                <div class="modal-actions">
+                    <a id="downloadFotoBtn" href="#" class="btn-download" aria-label="Descargar foto">
+                        <i class="fas fa-download" aria-hidden="true"></i> Descargar foto
+                    </a>
+                    <button onclick="closeModal('fotoModal')" class="btn-download" style="background: #6b7280;" aria-label="Cerrar ventana de vista previa">
+                        <i class="fas fa-times" aria-hidden="true"></i> Cerrar
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -801,26 +806,36 @@
         // Función para abrir el modal de la foto
         function openFotoModal(fotoUrl) {
             const modal = document.getElementById('fotoModal');
-            const modalImg = document.getElementById('modalFoto');
-            const closeButton = modal.querySelector('.close-btn');
+            const img = document.getElementById('modalFoto');
+            const downloadBtn = document.getElementById('downloadFotoBtn');
             
-            // Guardar el último elemento con foco
+            if (!modal || !img || !downloadBtn) return;
+            
+            // Guardar el elemento que tenía el foco
             lastFocusedElement = document.activeElement;
             
             // Mostrar el indicador de carga
             showLoader('foto');
             
-            // Configurar la URL de la imagen con un timestamp para evitar caché
+            // Configurar la URL con un timestamp para evitar caché
             const imgUrl = fotoUrl + '?t=' + new Date().getTime();
             
+            // Configurar el botón de descarga
+            downloadBtn.href = imgUrl;
+            downloadBtn.download = 'foto-perfil.jpg';
+            downloadBtn.setAttribute('aria-label', 'Descargar foto de perfil');
+            
             // Configurar la imagen
-            modalImg.onload = function() {
+            img.onload = function() {
                 hideLoader('foto');
-                // Enfocar el botón de cierre una vez que la imagen se cargue
-                closeButton.focus();
+                // Actualizar el nombre del archivo de descarga con el ID si está disponible
+                const idMatch = fotoUrl.match(/\/(\d+)\/foto/);
+                if (idMatch && idMatch[1]) {
+                    downloadBtn.download = `foto-perfil-${idMatch[1]}.jpg`;
+                }
             };
             
-            modalImg.onerror = function() {
+            img.onerror = function() {
                 hideLoader('foto');
                 // Mostrar mensaje de error accesible
                 const errorMsg = document.createElement('div');
@@ -830,12 +845,14 @@
                 errorMsg.setAttribute('aria-live', 'assertive');
                 modal.querySelector('.modal-img-container').appendChild(errorMsg);
                 
-                // Enfocar el botón de cierre en caso de error
-                closeButton.focus();
+                // Deshabilitar el botón de descarga si hay un error
+                downloadBtn.style.opacity = '0.6';
+                downloadBtn.style.cursor = 'not-allowed';
+                downloadBtn.onclick = (e) => e.preventDefault();
             };
             
-            // Establecer el atributo src después de configurar los manejadores
-            modalImg.src = imgUrl;
+            // Establecer la fuente de la imagen
+            img.src = imgUrl;
             
             // Mostrar el modal
             modal.style.display = 'flex';
@@ -850,13 +867,12 @@
                 document.body.style.overflow = 'hidden';
             }, 10);
             
-            // Cerrar al hacer clic fuera de la imagen
+            // Cerrar al hacer clic fuera del contenido
             modal.onclick = function(event) {
                 if (event.target === modal) {
                     closeModal('fotoModal');
                 }
             };
-            
             // Cerrar con la tecla ESC
             const closeOnEsc = function(event) {
                 if (event.key === 'Escape') {
@@ -946,56 +962,68 @@
             document.addEventListener('keydown', closeOnEsc);
         }
         
-        // Función para cerrar un modal
+        // Función para cerrar el modal
         function closeModal(modalId) {
             const modal = document.getElementById(modalId);
             if (!modal) return;
             
-            // Iniciar la animación de salida
-            modal.classList.remove('active');
-            
             // Restaurar el desplazamiento del body
             document.body.style.overflow = '';
             
+            // Eliminar la clase active para la animación de salida
+            modal.classList.remove('active');
+            
+            // Limpiar el contenido del modal
+            if (modalId === 'fotoModal') {
+                const img = modal.querySelector('img');
+                const downloadBtn = document.getElementById('downloadFotoBtn');
+                
+                if (img) {
+                    // Limpiar manejadores de eventos de la imagen
+                    img.onload = null;
+                    img.onerror = null;
+                    // Limpiar la fuente de la imagen para liberar memoria
+                    img.src = '';
+                    img.alt = '';
+                    // Forzar la recolección de basura (opcional)
+                    if (window.gc) window.gc();
+                }
+                
+                // Restablecer el botón de descarga
+                if (downloadBtn) {
+                    downloadBtn.style.opacity = '';
+                    downloadBtn.style.cursor = '';
+                    downloadBtn.onclick = null;
+                }
+                
+            } else if (modalId === 'cvModal') {
+                const iframe = modal.querySelector('iframe');
+                if (iframe) {
+                    // Limpiar la fuente del iframe
+                    iframe.src = 'about:blank';
+                }
+            }
+            
+            // Limpiar cualquier mensaje de error
+            const errorMessages = modal.querySelectorAll('.error-message');
+            errorMessages.forEach(msg => msg.remove());
+            
+            // Eliminar cualquier manejador de eventos de teclado
+            const closeOnEsc = function() {};
+            document.removeEventListener('keydown', closeOnEsc);
+            
+            // Eliminar el manejador de clic fuera del contenido
+            modal.onclick = null;
+            
             // Esperar a que termine la animación antes de ocultar el modal
             setTimeout(() => {
-                // Ocultar el modal
                 modal.style.display = 'none';
                 
-                // Restaurar el foco al elemento que lo tenía antes de abrir el modal
+                // Restaurar el foco al último elemento que lo tenía
                 if (lastFocusedElement) {
                     lastFocusedElement.focus();
                 }
-                
-                // Limpiar el iframe del PDF para liberar memoria
-                if (modalId === 'cvModal') {
-                    const pdfViewer = document.getElementById('modalCVPdf');
-                    if (pdfViewer) {
-                        pdfViewer.src = '';
-                    }
-                    
-                    // Limpiar cualquier mensaje de error
-                    const errorMessages = modal.querySelectorAll('.error-message');
-                    errorMessages.forEach(msg => msg.remove());
-                } else if (modalId === 'fotoModal') {
-                    const modalImg = document.getElementById('modalFoto');
-                    if (modalImg) {
-                        modalImg.src = '';
-                    }
-                    
-                    // Limpiar cualquier mensaje de error
-                    const errorMessages = modal.querySelectorAll('.error-message');
-                    errorMessages.forEach(msg => msg.remove());
-                }
-                
-                // Eliminar cualquier manejador de eventos de teclado
-                const closeOnEsc = function() {};
-                document.removeEventListener('keydown', closeOnEsc);
-                
-                // Eliminar el manejador de clic fuera del contenido
-                modal.onclick = null;
-                
-            }, 300); // Tiempo de la transición CSS
+            }, 300); // Tiempo igual a la duración de la transición CSS
         }
     </script>
 </body>
