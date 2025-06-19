@@ -16,28 +16,33 @@
         </header>
 
         <!-- Botón para abrir el modal de creación -->
-        <button onclick="abrirModalCrear()" class="mb-6 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center">
-            <i class="fas fa-plus mr-2"></i> Nuevo Registro
-        </button>
-
-        <!-- Lista de registros -->
-        <div class="bg-white rounded-lg shadow overflow-hidden">
-            <div class="overflow-x-auto">
+        <!-- Contenedor principal -->
+        <div class="container mx-auto px-4 py-8">
+            <div class="mb-6">
+                <h1 class="text-2xl font-bold text-gray-800">Datos Personales</h1>
+            </div>
+            
+            <!-- Tabla de datos (solo en pantallas medianas y grandes) -->
+            <div class="hidden md:block bg-white shadow-md rounded-lg overflow-hidden">
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">
                         <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Foto</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Profesión</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">CV</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Perfil</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Profesión</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Documento</th>
+                            <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Editar</th>
                         </tr>
                     </thead>
                     <tbody id="tablaDatos" class="bg-white divide-y divide-gray-200">
                         <!-- Los datos se cargarán aquí dinámicamente -->
                     </tbody>
                 </table>
+            </div>
+            
+            <!-- Contenedor de tarjetas (solo en móviles) -->
+            <div id="cardsContainer" class="md:hidden grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+                <!-- Las tarjetas se cargarán aquí dinámicamente -->
             </div>
         </div>
     </div>
@@ -174,16 +179,20 @@
             cerrarModal();
         });
 
-        // Función para cargar los datos en la tabla
+        // Función para cargar los datos en la tabla y tarjetas
         async function cargarDatos() {
             try {
                 const tabla = document.getElementById('tablaDatos');
-                if (!tabla) {
-                    console.error('No se encontró el elemento con id "tablaDatos"');
+                const cardsContainer = document.getElementById('cardsContainer');
+                
+                if (!tabla || !cardsContainer) {
+                    console.error('No se encontraron los elementos necesarios');
                     return;
                 }
                 
+                // Mostrar mensaje de carga
                 tabla.innerHTML = '<tr><td colspan="6" class="px-6 py-4 text-center text-gray-500">Cargando datos...</td></tr>';
+                cardsContainer.innerHTML = '<div class="col-span-2 text-center text-gray-500 py-4">Cargando datos...</div>';
                 
                 console.log('Solicitando datos a:', `${API_URL}/datos-personales`);
                 const response = await fetch(`${API_URL}/datos-personales`);
@@ -197,10 +206,12 @@
                 const datos = await response.json();
                 console.log('Datos recibidos:', datos);
                 
-                // Limpiar la tabla
+                // Limpiar contenedores
                 tabla.innerHTML = '';
+                cardsContainer.innerHTML = '';
 
                 if (!datos || datos.length === 0) {
+                    // Mensaje para la tabla
                     const fila = document.createElement('tr');
                     fila.innerHTML = `
                         <td colspan="6" class="px-6 py-4 text-center text-gray-500">
@@ -208,33 +219,47 @@
                         </td>
                     `;
                     tabla.appendChild(fila);
+                    
+                    // Mensaje para las tarjetas
+                    const noDataCard = document.createElement('div');
+                    noDataCard.className = 'col-span-2 text-center text-gray-500 py-4';
+                    noDataCard.textContent = 'No hay registros para mostrar';
+                    cardsContainer.appendChild(noDataCard);
+                    
                     return;
                 }
                 
-                // Crear filas para cada registro
+                // Crear filas para la tabla (solo en pantallas grandes)
                 datos.forEach(registro => {
                     const fila = document.createElement('tr');
                     fila.className = 'hover:bg-gray-50';
                     fila.innerHTML = `
                         <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="h-10 w-10 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center relative cursor-pointer" 
-                                 onclick="openFotoModal('${API_URL}/datos-personales/${registro.id}/foto')">
-                                ${registro.id ? `
-                                    <img 
-                                        src="${API_URL}/datos-personales/${registro.id}/foto?t=${new Date().getTime()}" 
-                                        alt="Foto de perfil" 
-                                        class="h-full w-full object-cover" 
-                                        style="max-width: 40px; max-height: 40px; display: none;"
-                                        data-id="${registro.id}"
-                                        onload="this.style.display='block'; this.nextElementSibling?.remove()"
-                                        onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling?.style.display='block'"
-                                    >
-                                ` : ''}
-                                <div class="absolute text-xs text-gray-500" ${registro.id ? 'style="display: none;"' : ''}>Sin foto</div>
+                            <div class="flex items-center space-x-3">
+                                <div class="flex-shrink-0 h-10 w-10 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center relative cursor-pointer" 
+                                     onclick="openFotoModal('${API_URL}/datos-personales/${registro.id}/foto')">
+                                    ${registro.id ? `
+                                        <img 
+                                            src="${API_URL}/datos-personales/${registro.id}/foto?t=${new Date().getTime()}" 
+                                            alt="Foto de perfil" 
+                                            class="h-full w-full object-cover" 
+                                            style="max-width: 40px; max-height: 40px; display: none;"
+                                            data-id="${registro.id}"
+                                            onload="this.style.display='block'; this.nextElementSibling?.remove()"
+                                            onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling?.style.display='block'"
+                                        >
+                                    ` : ''}
+                                    <div class="absolute text-xs text-gray-500" ${registro.id ? 'style="display: none;"' : ''}>Sin foto</div>
+                                </div>
+                                <div>
+                                    <div class="text-sm font-medium text-gray-900">${registro.nombre || 'Sin nombre'}</div>
+                                </div>
                             </div>
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${registro.nombre || ''}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${registro.profesion || ''}</td>
+                        <td class="px-6 py-4 text-sm text-gray-500">
+                            <div class="font-medium">${registro.profesion || 'Sin profesión'}</div>
+                            <div class="text-xs text-gray-400 mt-1 line-clamp-2">${registro.descripcion || 'Sin descripción'}</div>
+                        </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${registro.email || ''}</td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             ${registro.cv ? `
@@ -242,16 +267,78 @@
                                     <i class="fas fa-file-pdf mr-1"></i> Ver CV
                                 </button>` : 'No disponible'}
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <button onclick="editarRegistro(${JSON.stringify(registro).replace(/"/g, '&quot;')})" class="text-blue-600 hover:text-blue-900 mr-3">
-                                <i class="fas fa-edit"></i> Editar
-                            </button>
-                            <button onclick="solicitarEliminar(${registro.id})" class="text-red-600 hover:text-red-900">
-                                <i class="fas fa-trash-alt"></i> Eliminar
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm">
+                            <button onclick="editarRegistro(${JSON.stringify(registro).replace(/"/g, '&quot;')})" 
+                                    class="text-blue-600 hover:text-blue-900 p-1 rounded-full hover:bg-blue-50"
+                                    title="Editar perfil">
+                                <i class="fas fa-edit"></i>
+                                <span class="sr-only">Editar</span>
                             </button>
                         </td>
                     `;
                     tabla.appendChild(fila);
+                });
+                
+                // Crear tarjetas para móviles
+                datos.forEach(registro => {
+                    const card = document.createElement('div');
+                    card.className = 'bg-white rounded-lg shadow-md overflow-hidden border border-gray-100';
+                    
+                    // Obtener la URL de la foto con timestamp para evitar caché
+                    const fotoUrl = registro.id ? 
+                        `${API_URL}/datos-personales/${registro.id}/foto?t=${new Date().getTime()}` : '';
+                    
+                    card.innerHTML = `
+                        <div class="p-4">
+                            <div class="flex items-start space-x-4">
+                                <!-- Foto de perfil -->
+                                <div class="flex-shrink-0">
+                                    <div class="h-16 w-16 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center relative cursor-pointer"
+                                         onclick="openFotoModal('${API_URL}/datos-personales/${registro.id}/foto')">
+                                        ${registro.id ? `
+                                            <img 
+                                                src="${fotoUrl}"
+                                                alt="Foto de perfil"
+                                                class="h-full w-full object-cover"
+                                                style="display: none;"
+                                                onload="this.style.display='block'; this.nextElementSibling?.remove()"
+                                                onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling?.style.display='block'"
+                                            >
+                                        ` : ''}
+                                        <div class="absolute text-xs text-gray-500" ${registro.id ? 'style="display: none;"' : ''}>Sin foto</div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Información del perfil -->
+                                <div class="flex-1 min-w-0">
+                                    <h3 class="text-lg font-medium text-gray-900 truncate">${registro.nombre || 'Sin nombre'}</h3>
+                                    <p class="text-sm text-gray-500 truncate">${registro.profesion || 'Sin profesión'}</p>
+                                    <p class="text-sm text-gray-500 truncate">${registro.email || 'Sin email'}</p>
+                                    <div class="mt-1 text-xs text-gray-400 line-clamp-2">${registro.descripcion || 'Sin descripción'}</div>
+                                </div>
+                            </div>
+                            
+                            <!-- Acciones -->
+                            <div class="mt-4 flex justify-between items-center">
+                                ${registro.cv ? `
+                                    <button onclick="openCVModal('${API_URL}/datos-personales/${registro.id}/cv')" 
+                                            class="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center">
+                                        <i class="fas fa-file-pdf mr-1"></i> Ver CV
+                                    </button>
+                                ` : '<div class="text-sm text-gray-500">Sin CV</div>'}
+                                
+                                <div class="space-x-2">
+                                    <button onclick="editarRegistro(${JSON.stringify(registro).replace(/"/g, '&quot;')})" 
+                                            class="text-blue-600 hover:text-blue-800 p-1 rounded-full hover:bg-blue-50">
+                                        <i class="fas fa-edit"></i>
+                                        <span class="sr-only">Editar</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    cardsContainer.appendChild(card);
                 });
             } catch (error) {
                 console.error('Error al cargar los datos:', error);
