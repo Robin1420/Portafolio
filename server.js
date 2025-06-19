@@ -108,25 +108,36 @@ router.get('/api/datos-personales/:id/foto', async (req, res) => {
     }
 });
 
-// Obtener el CV
+// Endpoint para obtener el CV
 router.get('/api/datos-personales/:id/cv', async (req, res) => {
     try {
         const pool = await getConnection();
         const result = await pool.request()
             .input('id', sql.Int, req.params.id)
-            .query('SELECT cv FROM datos_personales WHERE id = @id');
+            .query('SELECT cv, nombre, apellido FROM datos_personales WHERE id = @id');
         
         if (result.recordset.length === 0 || !result.recordset[0].cv) {
             return res.status(404).json({ error: 'CV no encontrado' });
         }
         
-        // Configurar los encabezados para un PDF
         const cvBuffer = result.recordset[0].cv;
-        res.writeHead(200, {
-            'Content-Type': 'application/pdf',
-            'Content-Disposition': 'inline; filename=CV.pdf',
-            'Content-Length': cvBuffer.length
-        });
+        const nombre = (result.recordset[0].nombre || 'CV').trim();
+        const apellido = (result.recordset[0].apellido || '').trim();
+        const nombreArchivo = `${nombre}${apellido ? '_' + apellido : ''}_CV.pdf`;
+        
+        // Configurar los encabezados para la visualización en el navegador
+        res.setHeader('Content-Type', 'application/pdf');
+        
+        // Si hay un parámetro 'download', forzar la descarga
+        if (req.query.download) {
+            res.setHeader('Content-Disposition', `attachment; filename="${nombreArchivo}"`);
+        } else {
+            res.setHeader('Content-Disposition', `inline; filename="${nombreArchivo}"`);
+        }
+        
+        res.setHeader('Content-Length', cvBuffer.length);
+        
+        // Enviar el archivo
         res.end(cvBuffer);
     } catch (error) {
         console.error(`Error al obtener el CV con ID ${req.params.id}:`, error);

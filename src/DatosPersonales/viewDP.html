@@ -217,30 +217,30 @@
                     fila.className = 'hover:bg-gray-50';
                     fila.innerHTML = `
                         <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="h-10 w-10 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center relative">
-                            ${registro.id ? `
-                                <img 
-                                    src="${API_URL}/datos-personales/${registro.id}/foto?t=${new Date().getTime()}" 
-                                    alt="Foto de perfil" 
-                                    class="h-full w-full object-cover" 
-                                    style="max-width: 40px; max-height: 40px; display: none;"
-                                    data-id="${registro.id}"
-                                    onload="this.style.display='block'; this.nextElementSibling?.remove()"
-                                    onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling?.style.display='block'"
-                                >
-                            ` : ''}
-                            <div class="absolute text-xs text-gray-500" ${registro.id ? 'style="display: none;"' : ''}>Sin foto</div>
-                        </div>
-                    </td>
+                            <div class="h-10 w-10 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center relative cursor-pointer" 
+                                 onclick="openFotoModal('${API_URL}/datos-personales/${registro.id}/foto')">
+                                ${registro.id ? `
+                                    <img 
+                                        src="${API_URL}/datos-personales/${registro.id}/foto?t=${new Date().getTime()}" 
+                                        alt="Foto de perfil" 
+                                        class="h-full w-full object-cover" 
+                                        style="max-width: 40px; max-height: 40px; display: none;"
+                                        data-id="${registro.id}"
+                                        onload="this.style.display='block'; this.nextElementSibling?.remove()"
+                                        onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling?.style.display='block'"
+                                    >
+                                ` : ''}
+                                <div class="absolute text-xs text-gray-500" ${registro.id ? 'style="display: none;"' : ''}>Sin foto</div>
+                            </div>
+                        </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${registro.nombre || ''}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${registro.profesion || ''}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${registro.email || ''}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            ${registro.id ? `
-                                <button onclick="verCV(${registro.id})" class="text-blue-600 hover:text-blue-900 flex items-center">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            ${registro.cv ? `
+                                <button onclick="openCVModal('${API_URL}/datos-personales/${registro.id}/cv')" class="text-blue-600 hover:text-blue-900 flex items-center">
                                     <i class="fas fa-file-pdf mr-1"></i> Ver CV
-                                </button>
-                            ` : 'No disponible'}
+                                </button>` : 'No disponible'}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                             <button onclick="editarRegistro(${JSON.stringify(registro).replace(/"/g, '&quot;')})" class="text-blue-600 hover:text-blue-900 mr-3">
@@ -394,17 +394,6 @@
             });
         }
 
-        // Función para abrir el CV en una nueva pestaña
-        function verCV(id) {
-            if (id) {
-                // Abrir el CV en una nueva pestaña
-                window.open(`${API_URL}/datos-personales/${id}/cv`, '_blank');
-            } else {
-                console.error('ID de registro no proporcionado');
-                alert('No se pudo abrir el CV. ID de registro no proporcionado.');
-            }
-        }
-
         // Función para verificar si una imagen existe
         function checkImageExists(imageUrl, callback) {
             const img = new Image();
@@ -420,6 +409,593 @@
                 // Si la imagen no se cargó correctamente
                 img.onerror();
             }
+        }
+    </script>
+
+    <!-- Estilos mejorados para los modales -->
+    <style>
+        /* Estilos base del modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+            overflow-y: auto;
+            padding: 2rem 1rem;
+        }
+        
+        .modal.active {
+            opacity: 1;
+            display: flex;
+        }
+        
+        .modal-content {
+            background-color: #fff;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            width: 90%;
+            max-width: 900px;
+            max-height: 90vh;
+            overflow: hidden;
+            position: relative;
+            transform: translateY(-20px);
+            transition: transform 0.3s ease-out;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .modal.active .modal-content {
+            transform: translateY(0);
+        }
+        
+        /* Estilos para la imagen en el modal */
+        .modal-img-container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 1.5rem;
+            background-color: #f8f9fa;
+            min-height: 300px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .modal-pdf-container {
+            flex: 1;
+            min-height: 60vh;
+            background-color: #525659;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal-pdf {
+            width: 100%;
+            height: 100%;
+            min-height: 60vh;
+            border: none;
+            background-color: #525659;
+        }
+        
+        /* Estilos para el indicador de carga */
+        .loading {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            gap: 1rem;
+            z-index: 10;
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #4f46e5;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .modal-img {
+            max-width: 100%;
+            max-height: 70vh;
+            width: auto;
+            height: auto;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s ease;
+            background-color: #fff;
+        }
+        
+        .modal-img:hover {
+            transform: scale(1.02);
+        }
+        
+        /* Encabezado del modal */
+        .modal-header {
+            padding: 1rem 1.5rem;
+            background-color: #2d3748;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .modal-title {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: white;
+        }
+        
+        /* Botón de cierre */
+        .close-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            font-size: 1.5rem;
+            color: rgba(255, 255, 255, 0.9);
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            margin: 0;
+            outline: none;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+        
+        .close-btn:hover, .close-btn:focus {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            transform: rotate(90deg) scale(1.1);
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+        }
+        
+        .close-btn:active {
+            transform: rotate(90deg) scale(0.95);
+        }
+        
+        /* Pie del modal */
+        .modal-footer {
+            padding: 1rem 1.5rem;
+            background-color: #f8f9fa;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        
+        .modal-actions {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+        
+        .btn-download {
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            color: white;
+            padding: 0.5rem 1.25rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .btn-download:hover {
+            background: linear-gradient(135deg, #4338ca, #6d28d9);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+        
+        .btn-download:active {
+            transform: translateY(0);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+        
+        .btn-download i {
+            font-size: 0.9em;
+        }
+        
+        /* Mensaje de ayuda */
+        .help-text {
+            color: #6b7280;
+            font-size: 0.875rem;
+            margin: 0;
+            flex: 1;
+            text-align: right;
+        }
+        
+        /* Efecto de carga */
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        
+        .spinner {
+            width: 1.5rem;
+            height: 1.5rem;
+            border: 3px solid rgba(255, 255, 255, 0.2);
+            border-left-color: white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .modal-content {
+                width: 95%;
+                max-height: 95vh;
+            }
+            
+            .modal-footer {
+                flex-direction: column;
+                align-items: stretch;
+                text-align: center;
+            }
+            
+            .help-text {
+                text-align: center;
+                margin-top: 0.5rem;
+            }
+        }
+    </style>
+
+    <!-- Modal para la foto -->
+    <div id="fotoModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="fotoModalTitle" aria-describedby="fotoModalDesc">
+        <div class="modal-content" role="document">
+            <div class="modal-header">
+                <h3 id="fotoModalTitle" class="modal-title">Vista Previa de la Foto</h3>
+            </div>
+            <div class="modal-img-container">
+                <img id="modalFoto" class="modal-img" src="" alt="Foto de perfil" onload="hideLoader('foto')">
+                <div class="loading" id="fotoLoading" role="status" aria-live="polite">
+                    <div class="spinner" aria-hidden="true"></div>
+                    <span>Cargando imagen...</span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <p id="fotoModalDesc" class="help-text">Haz clic fuera de la imagen o presiona ESC para cerrar</p>
+                <button onclick="closeModal('fotoModal')" class="btn-download" aria-label="Cerrar ventana de vista previa">
+                    <i class="fas fa-times" aria-hidden="true"></i> Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para el CV -->
+    <div id="cvModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="cvModalTitle" aria-describedby="cvModalDesc">
+        <div class="modal-content" role="document">
+            <div class="modal-header">
+                <h3 id="cvModalTitle" class="modal-title">Visualizador de CV</h3>
+            </div>
+            <div class="modal-pdf-container">
+                <iframe 
+                    id="modalCVPdf" 
+                    class="modal-pdf" 
+                    src="" 
+                    title="Vista previa del CV"
+                    aria-label="Vista previa del documento PDF"
+                    onload="hideLoader('cv')">
+                </iframe>
+                <div class="loading" id="cvLoading" role="status" aria-live="polite">
+                    <div class="spinner" aria-hidden="true"></div>
+                    <span>Cargando documento...</span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <p id="cvModalDesc" class="help-text">Si el documento no se carga correctamente, intenta descargarlo</p>
+                <div class="modal-actions">
+                    <a id="downloadCvBtn" href="#" class="btn-download" aria-label="Descargar CV">
+                        <i class="fas fa-download" aria-hidden="true"></i> Descargar CV
+                    </a>
+                    <button onclick="closeModal('cvModal')" class="btn-download" style="background: #6b7280;" aria-label="Cerrar visualizador de CV">
+                        <i class="fas fa-times" aria-hidden="true"></i> Cerrar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Función para mostrar el indicador de carga
+        function showLoader(modalId) {
+            const loadingElement = document.getElementById(`${modalId}Loading`);
+            if (loadingElement) {
+                loadingElement.style.display = 'flex';
+            }
+        }
+        
+        // Función para ocultar el indicador de carga
+        function hideLoader(modalId) {
+            const loadingElement = document.getElementById(`${modalId}Loading`);
+            if (loadingElement) {
+                loadingElement.style.display = 'none';
+            }
+        }
+        
+        // Variable para mantener el último elemento con foco antes de abrir el modal
+        let lastFocusedElement = null;
+        
+        // Función para atrapar el foco dentro del modal
+        function trapFocus(element) {
+            const focusableElements = element.querySelectorAll(
+                'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+            );
+            
+            if (focusableElements.length === 0) return;
+            
+            const firstFocusable = focusableElements[0];
+            const lastFocusable = focusableElements[focusableElements.length - 1];
+            
+            // Mover el foco al primer elemento enfocable
+            firstFocusable.focus();
+            
+            // Manejar el tab para mantener el foco dentro del modal
+            element.addEventListener('keydown', function(e) {
+                const isTabPressed = (e.key === 'Tab' || e.keyCode === 9);
+                
+                if (!isTabPressed) return;
+                
+                if (e.shiftKey) {
+                    // Shift + Tab
+                    if (document.activeElement === firstFocusable) {
+                        e.preventDefault();
+                        lastFocusable.focus();
+                    }
+                } else {
+                    // Solo Tab
+                    if (document.activeElement === lastFocusable) {
+                        e.preventDefault();
+                        firstFocusable.focus();
+                    }
+                }
+            });
+        }
+        
+        // Función para abrir el modal de la foto
+        function openFotoModal(fotoUrl) {
+            const modal = document.getElementById('fotoModal');
+            const modalImg = document.getElementById('modalFoto');
+            const closeButton = modal.querySelector('.close-btn');
+            
+            // Guardar el último elemento con foco
+            lastFocusedElement = document.activeElement;
+            
+            // Mostrar el indicador de carga
+            showLoader('foto');
+            
+            // Configurar la URL de la imagen con un timestamp para evitar caché
+            const imgUrl = fotoUrl + '?t=' + new Date().getTime();
+            
+            // Configurar la imagen
+            modalImg.onload = function() {
+                hideLoader('foto');
+                // Enfocar el botón de cierre una vez que la imagen se cargue
+                closeButton.focus();
+            };
+            
+            modalImg.onerror = function() {
+                hideLoader('foto');
+                // Mostrar mensaje de error accesible
+                const errorMsg = document.createElement('div');
+                errorMsg.className = 'error-message';
+                errorMsg.textContent = 'No se pudo cargar la imagen. Por favor, inténtalo de nuevo.';
+                errorMsg.setAttribute('role', 'alert');
+                errorMsg.setAttribute('aria-live', 'assertive');
+                modal.querySelector('.modal-img-container').appendChild(errorMsg);
+                
+                // Enfocar el botón de cierre en caso de error
+                closeButton.focus();
+            };
+            
+            // Establecer el atributo src después de configurar los manejadores
+            modalImg.src = imgUrl;
+            
+            // Mostrar el modal
+            modal.style.display = 'flex';
+            
+            // Agregar la clase active después de un pequeño retraso para la animación
+            setTimeout(() => {
+                modal.classList.add('active');
+                // Atrapar el foco dentro del modal
+                trapFocus(modal);
+                
+                // Agregar clase al body para evitar el desplazamiento
+                document.body.style.overflow = 'hidden';
+            }, 10);
+            
+            // Cerrar al hacer clic fuera de la imagen
+            modal.onclick = function(event) {
+                if (event.target === modal) {
+                    closeModal('fotoModal');
+                }
+            };
+            
+            // Cerrar con la tecla ESC
+            const closeOnEsc = function(event) {
+                if (event.key === 'Escape') {
+                    closeModal('fotoModal');
+                    document.removeEventListener('keydown', closeOnEsc);
+                }
+            };
+            
+            document.addEventListener('keydown', closeOnEsc);
+        }
+        
+        // Función para abrir el modal del CV
+        function openCVModal(cvUrl) {
+            const modal = document.getElementById('cvModal');
+            const pdfViewer = document.getElementById('modalCVPdf');
+            const downloadBtn = document.getElementById('downloadCvBtn');
+            const closeButton = modal.querySelector('.close-btn');
+            
+            // Guardar el último elemento con foco
+            lastFocusedElement = document.activeElement;
+            
+            // Mostrar el indicador de carga
+            showLoader('cv');
+            
+            // Configurar la URL del visor de PDF (sin parámetro de descarga para visualización)
+            const viewPdfUrl = cvUrl + (cvUrl.includes('?') ? '&' : '?') + 't=' + new Date().getTime();
+            
+            // Configurar la URL de descarga (con parámetro download=true)
+            const downloadPdfUrl = cvUrl + (cvUrl.includes('?') ? '&' : '?') + 'download=true&t=' + new Date().getTime();
+            
+            // Configurar el visor de PDF
+            pdfViewer.onload = function() {
+                hideLoader('cv');
+                // Enfocar el botón de cierre una vez que el PDF se cargue
+                closeButton.focus();
+            };
+            
+            pdfViewer.onerror = function() {
+                hideLoader('cv');
+                // Mostrar mensaje de error accesible
+                const errorMsg = document.createElement('div');
+                errorMsg.className = 'error-message';
+                errorMsg.textContent = 'No se pudo cargar el documento PDF. Por favor, inténtalo de nuevo o utiliza el botón de descarga.';
+                errorMsg.setAttribute('role', 'alert');
+                errorMsg.setAttribute('aria-live', 'assertive');
+                modal.querySelector('.modal-pdf-container').appendChild(errorMsg);
+                
+                // Enfocar el botón de cierre en caso de error
+                closeButton.focus();
+            };
+            
+            // Configurar el visor de PDF
+            pdfViewer.src = viewPdfUrl;
+            
+            // Configurar el botón de descarga
+            downloadBtn.href = downloadPdfUrl;
+            downloadBtn.setAttribute('download', ''); // Forzar descarga
+            
+            // Mostrar el modal
+            modal.style.display = 'flex';
+            
+            // Agregar la clase active después de un pequeño retraso para la animación
+            setTimeout(() => {
+                modal.classList.add('active');
+                // Atrapar el foco dentro del modal
+                trapFocus(modal);
+                
+                // Agregar clase al body para evitar el desplazamiento
+                document.body.style.overflow = 'hidden';
+            }, 10);
+            
+            // Cerrar al hacer clic fuera del contenido
+            modal.onclick = function(event) {
+                if (event.target === modal) {
+                    closeModal('cvModal');
+                }
+            };
+            
+            // Cerrar con la tecla ESC
+            const closeOnEsc = function(event) {
+                if (event.key === 'Escape') {
+                    closeModal('cvModal');
+                    document.removeEventListener('keydown', closeOnEsc);
+                }
+            };
+            
+            document.addEventListener('keydown', closeOnEsc);
+        }
+        
+        // Función para cerrar un modal
+        function closeModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (!modal) return;
+            
+            // Iniciar la animación de salida
+            modal.classList.remove('active');
+            
+            // Restaurar el desplazamiento del body
+            document.body.style.overflow = '';
+            
+            // Esperar a que termine la animación antes de ocultar el modal
+            setTimeout(() => {
+                // Ocultar el modal
+                modal.style.display = 'none';
+                
+                // Restaurar el foco al elemento que lo tenía antes de abrir el modal
+                if (lastFocusedElement) {
+                    lastFocusedElement.focus();
+                }
+                
+                // Limpiar el iframe del PDF para liberar memoria
+                if (modalId === 'cvModal') {
+                    const pdfViewer = document.getElementById('modalCVPdf');
+                    if (pdfViewer) {
+                        pdfViewer.src = '';
+                    }
+                    
+                    // Limpiar cualquier mensaje de error
+                    const errorMessages = modal.querySelectorAll('.error-message');
+                    errorMessages.forEach(msg => msg.remove());
+                } else if (modalId === 'fotoModal') {
+                    const modalImg = document.getElementById('modalFoto');
+                    if (modalImg) {
+                        modalImg.src = '';
+                    }
+                    
+                    // Limpiar cualquier mensaje de error
+                    const errorMessages = modal.querySelectorAll('.error-message');
+                    errorMessages.forEach(msg => msg.remove());
+                }
+                
+                // Eliminar cualquier manejador de eventos de teclado
+                const closeOnEsc = function() {};
+                document.removeEventListener('keydown', closeOnEsc);
+                
+                // Eliminar el manejador de clic fuera del contenido
+                modal.onclick = null;
+                
+            }, 300); // Tiempo de la transición CSS
         }
     </script>
 </body>
