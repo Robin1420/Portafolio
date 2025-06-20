@@ -146,9 +146,20 @@
         let registroActual = null;
         const API_URL = 'http://localhost:3000/api'; // URL base de la API
 
-        // Cargar datos al iniciar
+        // Inicializar el modal de Bootstrap
+        let previewModal = null;
         document.addEventListener('DOMContentLoaded', () => {
             console.log('DOM completamente cargado, iniciando carga de datos...');
+            
+            // Inicializar el modal
+            const modalElement = document.getElementById('previewModal');
+            if (modalElement && typeof bootstrap !== 'undefined') {
+                previewModal = new bootstrap.Modal(modalElement, {
+                    backdrop: 'static',
+                    keyboard: false
+                });
+            }
+            
             cargarDatos();
         });
 
@@ -516,6 +527,54 @@
         let currentFileType = ''; // 'image' o 'pdf'
         let currentFileUrl = '';
         
+        // Función para cerrar el modal de previsualización
+        function closePreviewModal() {
+            const modal = document.getElementById('previewModal');
+            if (!modal) return;
+            
+            // 1. Intentar con Bootstrap 5
+            if (typeof bootstrap !== 'undefined') {
+                try {
+                    const bsModal = bootstrap.Modal.getInstance(modal) || new bootstrap.Modal(modal);
+                    bsModal.hide();
+                } catch (e) {
+                    console.warn('Error al cerrar con Bootstrap:', e);
+                }
+            }
+            
+            // 2. Forzar cierre manual
+            modal.style.display = 'none';
+            modal.classList.remove('show');
+            modal.setAttribute('aria-hidden', 'true');
+            modal.removeAttribute('aria-modal');
+            modal.removeAttribute('role');
+            modal.removeAttribute('style');
+            
+            // 3. Limpiar clases
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            
+            // 4. Limpiar el backdrop
+            const backdrops = document.querySelectorAll('.modal-backdrop');
+            backdrops.forEach(backdrop => {
+                backdrop.parentNode.removeChild(backdrop);
+            });
+            
+            // 5. Restaurar el body
+            document.body.classList.remove('modal-open');
+            document.body.style.overflow = 'auto';
+            document.body.style.paddingRight = '';
+            
+            // 6. Limpiar contenido
+            const previewContent = document.getElementById('previewContent');
+            if (previewContent) {
+                previewContent.innerHTML = '';
+            }
+            
+            // 7. Forzar actualización del DOM
+            void modal.offsetHeight;
+        }
+
         // Cerrar el modal al hacer clic fuera del contenido
         document.getElementById('previewModal').addEventListener('click', function(e) {
             if (e.target === this) {
@@ -553,7 +612,7 @@
             `;
 
             const formData = new FormData();
-            formData.append('archivo', file);
+            formData.append('foto', file);
 
             try {
                 const response = await fetch('http://localhost:3000/api/upload/foto', {
@@ -631,7 +690,6 @@
                 </div>
             `;
 
-
             const formData = new FormData();
             formData.append('cv', file);
 
@@ -646,6 +704,7 @@
                 if (!response.ok) {
                     throw new Error(data.error || 'Error al subir el CV');
                 }
+
 
                 // Actualizar la vista previa con el nuevo PDF
                 const pdfViewer = document.getElementById('pdfViewer');
@@ -672,6 +731,24 @@
 
                 // Recargar los datos para actualizar la vista
                 await cargarDatos();
+                
+                // Cerrar el modal después de un pequeño retraso
+                await new Promise(resolve => setTimeout(resolve, 300));
+                closePreviewModal();
+                
+                // Forzar una actualización del DOM
+                const modal = document.getElementById('previewModal');
+                if (modal) {
+                    modal.style.display = 'none';
+                    modal.classList.add('hidden');
+                    document.body.classList.remove('modal-open');
+                    
+                    // Limpiar cualquier backdrop que haya quedado
+                    const backdrops = document.querySelectorAll('.modal-backdrop');
+                    backdrops.forEach(backdrop => {
+                        backdrop.parentNode.removeChild(backdrop);
+                    });
+                }
 
             } catch (error) {
                 console.error('Error al subir el CV:', error);
@@ -703,6 +780,20 @@
             const downloadBtn = document.getElementById('downloadBtn');
             const fileInput = document.getElementById('fileInput');
             const fileInfo = document.getElementById('fileInfo');
+            
+            // Mostrar el modal usando la instancia global de Bootstrap si está disponible
+            if (previewModal) {
+                previewModal.show();
+            } else if (typeof bootstrap !== 'undefined') {
+                // Si no hay instancia global, intentar crear una
+                const bsModal = new bootstrap.Modal(modal);
+                bsModal.show();
+            } else {
+                // Fallback a manipulación directa del DOM
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+                document.body.classList.add('overflow-hidden');
+            }
             
             // Configurar el tipo de archivo y URL actual
             currentFileType = fileType;
@@ -770,6 +861,10 @@
                     
                     // Determinar el tipo de archivo (foto o cv)
                     const tipo = fileType === 'image' ? 'foto' : 'cv';
+                    
+                    // Usar el nombre de campo correcto según el tipo
+                    formData.delete('archivo'); // Eliminar el campo anterior
+                    formData.append(tipo, file); // Agregar con el nombre correcto
                     
                     // Enviar el archivo al servidor
                     const response = await fetch(`/api/upload/${tipo}`, {

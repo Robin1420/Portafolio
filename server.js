@@ -109,7 +109,7 @@ app.use('/file', express.static(path.join(__dirname, 'file'), {
 }));
 
 // Ruta para subir la foto personal
-app.post('/api/upload/foto', upload.single('archivo'), (req, res) => {
+app.post('/api/upload/foto', upload.single('foto'), (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({
@@ -139,7 +139,7 @@ app.post('/api/upload/foto', upload.single('archivo'), (req, res) => {
 });
 
 // Ruta para subir el CV
-app.post('/api/upload/cv', uploadCV.single('cv'), (req, res) => {
+app.post('/api/upload/cv', uploadCV.single('cv'), async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({
@@ -154,7 +154,9 @@ app.post('/api/upload/cv', uploadCV.single('cv'), (req, res) => {
         res.status(200).json({
             success: true,
             message: 'CV subido correctamente',
-            fileUrl: fileUrl
+            fileUrl: fileUrl,
+            nombre: 'cv-personal.pdf',
+            size: req.file.size
         });
     } catch (error) {
         console.error('Error al subir el CV:', error);
@@ -192,10 +194,12 @@ app.get('/', (req, res) => {
 // Configuración de rutas API
 const router = express.Router();
 
-// Ruta para subir archivos (foto o CV)
-router.post('/upload/:tipo', upload.single('archivo'), async (req, res) => {
-    try {
-        if (!req.file) {
+// Ruta para subir archivos (foto o CV) - Ruta obsoleta, usar /api/upload/foto o /api/upload/cv
+router.post('/upload/:tipo', (req, res) => {
+    return res.status(400).json({
+        success: false,
+        error: 'Ruta obsoleta. Usa /api/upload/foto para fotos o /api/upload/cv para CVs'
+    });
             return res.status(400).json({ error: 'No se ha proporcionado ningún archivo' });
         }
 
@@ -456,34 +460,13 @@ router.put('/datos-personales/:id', async (req, res) => {
 
 
 // Ruta para subir la foto de perfil
-app.post('/api/upload/foto', upload.single('foto'), async (req, res) => {
-    try {
-        if (!req.file) {
-            return res.status(400).json({ error: 'No se proporcionó ningún archivo' });
-        }
-        
-        // Construir la URL completa del archivo
-        const fileUrl = `/file/datos/foto/foto-personal.png?t=${Date.now()}`;
-        
-        res.json({
-            success: true,
-            message: 'Foto subida correctamente',
-            fileUrl: fileUrl
-        });
-    } catch (error) {
-        console.error('Error al subir la foto:', error);
-        res.status(500).json({ 
-            error: 'Error al subir la foto',
-            details: error.message 
-        });
-    }
-});
+// Ruta duplicada eliminada
 
 // Ruta para subir el CV
-app.post('/api/upload/cv', upload.single('archivo'), async (req, res) => {
+app.post('/api/upload/cv', uploadCV.single('archivo'), async (req, res) => {
     try {
         if (!req.file) {
-            return res.status(400).json({ 
+            return res.status(400).json({
                 success: false,
                 error: 'No se proporcionó ningún archivo o el archivo no es un PDF válido'
             });
