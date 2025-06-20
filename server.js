@@ -8,21 +8,53 @@ const PORT = process.env.PORT || 3000;
 
 // Configuración de CORS
 const corsOptions = {
-    origin: '*', // En producción, reemplaza con el dominio de tu frontend
+    origin: '*',
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: true
+    allowedHeaders: ['Content-Type', 'Authorization', 'Content-Length', 'X-Requested-With'],
+    credentials: true,
+    optionsSuccessStatus: 200 // Algunos navegadores antiguos (IE11, varios SmartTVs) se ahogan con 204
 };
 
 // Middleware
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions)); // Habilitar preflight para todas las rutas
+
+// Manejar preflight para todas las rutas
+app.use((req, res, next) => {
+    if (req.method === 'OPTIONS') {
+        res.header('Access-Control-Allow-Origin', '*');
+        res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+        res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+        res.header('Access-Control-Max-Age', '86400'); // 24 horas
+        return res.status(200).json({});
+    }
+    next();
+});
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Servir archivos estáticos
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.static(path.join(__dirname, 'src')));
+app.use('/file', express.static(path.join(__dirname, 'file'), {
+    setHeaders: (res, path) => {
+        // Establecer los encabezados CORS necesarios
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    }
+}));
+
+// Ruta para verificar que los archivos estáticos se están sirviendo correctamente
+app.get('/check-files', (req, res) => {
+    res.json({
+        message: 'Servidor funcionando correctamente',
+        rutas: {
+            archivos: '/file',
+            public: '/public',
+            src: '/src'
+        }
+    });
+});
 
 // Middleware para logging de solicitudes
 app.use((req, res, next) => {
@@ -35,15 +67,73 @@ app.get('/', (req, res) => {
     res.redirect('/DatosPersonales/viewDP.html');
 });
 
-// Rutas API
+// Configuración de rutas API
 const router = express.Router();
 
+// Middleware para el router de API
+router.use((req, res, next) => {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
+    next();
+});
+
+// Crear un nuevo registro
+router.post('/datos-personales', async (req, res) => {
+    try {
+        const { nombre, profesion, descripcion, email, telefono, direccion } = req.body;
+        
+        // Validar campos requeridos
+        if (!nombre || !email) {
+            return res.status(400).json({ 
+                error: 'Los campos nombre y email son obligatorios',
+                camposRequeridos: ['nombre', 'email']
+            });
+        }
+        
+        const pool = await getConnection();
+        const result = await pool.request()
+            .input('nombre', sql.VarChar(100), nombre)
+            .input('profesion', sql.VarChar(100), profesion || null)
+            .input('descripcion', sql.Text, descripcion || null)
+            .input('email', sql.VarChar(100), email)
+            .input('telefono', sql.VarChar(20), telefono || null)
+            .input('direccion', sql.VarChar(200), direccion || null)
+            .query(`
+                INSERT INTO datos_personales (nombre, profesion, descripcion, email, telefono, direccion)
+                OUTPUT INSERTED.id
+                VALUES (@nombre, @profesion, @descripcion, @email, @telefono, @direccion)
+            `);
+            
+        const newId = result.recordset[0].id;
+        
+        // Obtener el registro recién creado para devolverlo
+        const newRecord = await pool.request()
+            .input('id', sql.Int, newId)
+            .query('SELECT id, nombre, profesion, descripcion, email, telefono, direccion FROM datos_personales WHERE id = @id');
+            
+        res.status(201).json(newRecord.recordset[0]);
+    } catch (error) {
+        console.error('Error al crear nuevo registro:', error);
+        
+        if (error.number === 2627) { // Violación de restricción única (email duplicado)
+            return res.status(409).json({ 
+                error: 'El correo electrónico ya está registrado',
+                campo: 'email'
+            });
+        }
+        
+        res.status(500).json({ 
+            error: 'Error al crear el registro',
+            detalles: error.message 
+        });
+    }
+});
+
 // Obtener todos los registros
-router.get('/api/datos-personales', async (req, res) => {
+router.get('/datos-personales', async (req, res) => {
     try {
         const pool = await getConnection();
         const result = await pool.request()
-            .query('SELECT *, CASE WHEN cv IS NOT NULL THEN 1 ELSE 0 END as has_cv FROM datos_personales');
+            .query('SELECT id, nombre, profesion, descripcion, email, telefono, direccion FROM datos_personales');
         res.json(result.recordset);
     } catch (error) {
         console.error('Error al obtener datos personales:', error);
@@ -52,7 +142,7 @@ router.get('/api/datos-personales', async (req, res) => {
 });
 
 // Obtener un registro por ID
-router.get('/api/datos-personales/:id', async (req, res) => {
+router.get('/datos-personales/:id', async (req, res) => {
     try {
         const pool = await getConnection();
         const result = await pool.request()
@@ -70,111 +160,9 @@ router.get('/api/datos-personales/:id', async (req, res) => {
     }
 });
 
-// Obtener la foto de perfil
-router.get('/api/datos-personales/:id/foto', async (req, res) => {
-    try {
-        const pool = await getConnection();
-        const result = await pool.request()
-            .input('id', sql.Int, req.params.id)
-            .query('SELECT foto_perfil FROM datos_personales WHERE id = @id');
-        
-        if (result.recordset.length === 0 || !result.recordset[0].foto_perfil) {
-            console.log('No se encontró la foto para el ID:', req.params.id);
-            return res.status(404).send('Foto no encontrada');
-        }
-        
-        // Obtener el buffer de la imagen
-        const fotoBuffer = result.recordset[0].foto_perfil;
-        
-        // Verificar si el buffer es válido
-        if (!fotoBuffer || fotoBuffer.length === 0) {
-            console.log('El buffer de la foto está vacío para el ID:', req.params.id);
-            return res.status(404).send('La foto no tiene datos');
-        }
-        
-        // Configurar los encabezados para una imagen
-        res.writeHead(200, {
-            'Content-Type': 'image/jpeg',
-            'Content-Length': fotoBuffer.length,
-            'Cache-Control': 'no-cache',
-            'Pragma': 'no-cache'
-        });
-        
-        // Enviar la imagen
-        res.end(fotoBuffer);
-    } catch (error) {
-        console.error(`Error al obtener la foto de perfil con ID ${req.params.id}:`, error);
-        res.status(500).send('Error al obtener la foto de perfil');
-    }
-});
-
-// Endpoint para obtener el CV
-router.get('/api/datos-personales/:id/cv', async (req, res) => {
-    try {
-        const pool = await getConnection();
-        const result = await pool.request()
-            .input('id', sql.Int, req.params.id)
-            .query('SELECT cv, nombre FROM datos_personales WHERE id = @id');
-        
-        if (result.recordset.length === 0 || !result.recordset[0].cv) {
-            return res.status(404).json({ error: 'CV no encontrado' });
-        }
-        
-        const cvBuffer = result.recordset[0].cv;
-        const nombre = (result.recordset[0].nombre || 'CV').trim();
-        const apellido = (result.recordset[0].apellido || '').trim();
-        const nombreArchivo = `${nombre}${apellido ? '_' + apellido : ''}_CV.pdf`;
-        
-        // Configurar los encabezados para la visualización en el navegador
-        res.setHeader('Content-Type', 'application/pdf');
-        
-        // Si hay un parámetro 'download', forzar la descarga
-        if (req.query.download) {
-            res.setHeader('Content-Disposition', `attachment; filename="${nombreArchivo}"`);
-        } else {
-            res.setHeader('Content-Disposition', `inline; filename="${nombreArchivo}"`);
-        }
-        
-        res.setHeader('Content-Length', cvBuffer.length);
-        
-        // Enviar el archivo
-        res.end(cvBuffer);
-    } catch (error) {
-        console.error(`Error al obtener el CV con ID ${req.params.id}:`, error);
-        res.status(500).json({ error: 'Error al obtener el CV' });
-    }
-});
-
-// Crear un nuevo registro
-router.post('/api/datos-personales', async (req, res) => {
-    try {
-        const { nombre, profesion, descripcion, email, telefono, direccion } = req.body;
-        
-        const pool = await getConnection();
-        const result = await pool.request()
-            .input('nombre', sql.VarChar(100), nombre)
-            .input('profesion', sql.VarChar(100), profesion)
-            .input('descripcion', sql.Text, descripcion)
-            .input('email', sql.VarChar(100), email)
-            .input('telefono', sql.VarChar(30), telefono)
-            .input('direccion', sql.VarChar(200), direccion)
-            .query(`INSERT INTO datos_personales 
-                   (nombre, profesion, descripcion, email, telefono, direccion) 
-                   VALUES (@nombre, @profesion, @descripcion, @email, @telefono, @direccion);
-                   SELECT SCOPE_IDENTITY() as id`);
-        
-        res.status(201).json({ id: result.recordset[0].id });
-    } catch (error) {
-        console.error('Error al crear datos personales:', error);
-        res.status(500).json({ error: 'Error al crear el registro' });
-    }
-});
-
 // Actualizar un registro (solo campos de texto por ahora)
-router.put('/api/datos-personales/:id', async (req, res) => {
+router.put('/datos-personales/:id', async (req, res) => {
     try {
-        // Extraer solo los campos de texto que queremos manejar por ahora
-        // Ignoramos foto_perfil y cv hasta que implementemos su manejo
         const { nombre, profesion, descripcion, email, telefono, direccion } = req.body;
         const id = parseInt(req.params.id);
         
@@ -293,26 +281,10 @@ router.put('/api/datos-personales/:id', async (req, res) => {
     }
 });
 
-// Eliminar un registro
-router.delete('/api/datos-personales/:id', async (req, res) => {
-    try {
-        const pool = await getConnection();
-        const result = await pool.request()
-            .input('id', sql.Int, req.params.id)
-            .query('DELETE FROM datos_personales WHERE id = @id');
-        
-        if (result.rowsAffected[0] === 0) {
-            return res.status(404).json({ error: 'Registro no encontrado' });
-        }
-        
-        res.json({ message: 'Registro eliminado correctamente' });
-    } catch (error) {
-        console.error(`Error al eliminar datos personales con ID ${req.params.id}:`, error);
-        res.status(500).json({ error: 'Error al eliminar el registro' });
-    }
-});
 
-app.use(router);
+
+// Montar el router en la ruta /api
+app.use('/api', router);
 
 // Servir la aplicación React en producción
 if (process.env.NODE_ENV === 'production') {
@@ -329,7 +301,8 @@ app.listen(PORT, () => {
 
 // Manejo de errores no capturados
 process.on('unhandledRejection', (reason, promise) => {
-    console.error('Unhandled Rejection at:', promise, 'reason:', reason);n});
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
 
 process.on('uncaughtException', (error) => {
     console.error('Uncaught Exception:', error);
