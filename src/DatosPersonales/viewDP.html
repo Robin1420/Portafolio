@@ -223,7 +223,13 @@
                     'success'
                 );
                 
-                // Cerrar el modal y recargar los datos
+                // Cerrar el modal de previsualización si está abierto
+                const previewModalElement = document.getElementById('previewModal');
+                if (previewModalElement && !previewModalElement.classList.contains('hidden')) {
+                    closePreviewModal();
+                }
+                
+                // Cerrar el modal de edición y recargar los datos
                 cerrarModal();
                 await cargarDatos();
                 
@@ -442,10 +448,12 @@
                         card.innerHTML = `
                             <div class="p-4">
                                 <div class="flex items-start">
-                                    <button onclick="openPreviewModal('/file/datos/foto/foto-personal.png', 'Foto de Perfil', 'image')" 
+                                    <button onclick="openPreviewModal('${fotoExiste ? fotoUrl : '/src/assets/placeholder-user.jpg'}', 'Foto de Perfil', 'image')" 
                                             class="focus:outline-none hover:opacity-90 transition-opacity">
-                                        <img src="/file/datos/foto/foto-personal.png" alt="Foto de perfil" 
-                                             class="h-12 w-12 rounded-full object-cover mr-3 flex-shrink-0">
+                                        <img src="${fotoExiste ? fotoUrl : '/src/assets/placeholder-user.jpg'}" 
+                                             alt="Foto de perfil" 
+                                             class="h-12 w-12 rounded-full object-cover mr-3 flex-shrink-0"
+                                             onerror="this.src='/src/assets/placeholder-user.jpg'">
                                     </button>
                                     <div class="flex-1">
                                         <h3 class="text-lg font-medium text-gray-900">${registro.nombre || 'Sin nombre'}</h3>
@@ -467,10 +475,10 @@
                                     </div>
                                 </div>
                                 <div class="mt-4 flex justify-between items-center">
-                                    <button onclick="openPreviewModal('/file/datos/documento/cv-personal.pdf', 'Documento', 'pdf')" 
+                                    <button onclick="openPreviewModal('${cvExiste ? cvUrl : '#'}', 'Documento', '${cvExiste ? 'pdf' : 'image'}')" 
                                             class="text-blue-600 hover:text-blue-800 text-sm flex items-center focus:outline-none">
                                         <i class="fas fa-file-pdf mr-1 text-red-500"></i>
-                                        Ver CV
+                                        ${cvExiste ? 'Ver CV' : 'Subir CV'}
                                     </button>
                                     <div class="space-x-3">
                                         <button onclick="editarRegistro(${JSON.stringify(registro).replace(/"/g, '&quot;')})" 
