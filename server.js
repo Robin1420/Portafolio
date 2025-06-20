@@ -1,7 +1,71 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const multer = require('multer');
+const fs = require('fs');
 const { getConnection, sql } = require('./config/db');
+
+// Configuración de Multer para subir archivos
+// Configuración de almacenamiento para multer
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        const uploadDir = path.join(__dirname, 'file/datos/foto');
+        // Crear el directorio si no existe
+        if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir, { recursive: true });
+        }
+        cb(null, uploadDir);
+    },
+    filename: function (req, file, cb) {
+        // Sobrescribir archivos existentes con los mismos nombres
+        cb(null, 'foto-personal.png');
+    }
+});
+
+// Configuración de multer para la foto
+const upload = multer({ 
+    storage: storage,
+    limits: {
+        fileSize: 5 * 1024 * 1024, // 5MB
+    },
+    fileFilter: (req, file, cb) => {
+        // Esta ruta se usa para subir fotos, solo permitir imágenes
+        if (file.mimetype.startsWith('image/')) {
+            cb(null, true);
+        } else {
+            cb(new Error('Solo se permiten archivos de imagen (JPG, PNG, etc.)'));
+        }
+    }
+});
+
+// Configuración de multer para el CV (si es necesario)
+const cvStorage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        const uploadDir = path.join(__dirname, 'file/datos/documento');
+        if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir, { recursive: true });
+        }
+        cb(null, uploadDir);
+    },
+    filename: function (req, file, cb) {
+        cb(null, 'cv-personal.pdf');
+    }
+});
+
+const uploadCV = multer({
+    storage: cvStorage,
+    limits: {
+        fileSize: 10 * 1024 * 1024, // 10MB
+    },
+    fileFilter: (req, file, cb) => {
+        // Esta ruta se usa para subir CVs, solo permitir PDFs
+        if (file.mimetype === 'application/pdf') {
+            cb(null, true);
+        } else {
+            cb(new Error('Solo se permiten archivos PDF'));
+        }
+    }
+});
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -44,6 +108,64 @@ app.use('/file', express.static(path.join(__dirname, 'file'), {
     }
 }));
 
+// Ruta para subir la foto personal
+app.post('/api/upload/foto', upload.single('archivo'), (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({
+                success: false,
+                error: 'No se proporcionó ningún archivo o el archivo no es una imagen válida'
+            });
+        }
+
+        // Devolver la URL del archivo con un timestamp para evitar el caché
+        const fileUrl = `/file/datos/foto/foto-personal.png?t=${Date.now()}`;
+        
+        res.status(200).json({
+            success: true,
+            message: 'Foto subida correctamente',
+            fileUrl: fileUrl,
+            nombre: 'foto-personal.png',
+            size: req.file.size
+        });
+    } catch (error) {
+        console.error('Error al subir la foto:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Error al procesar la foto',
+            details: error.message
+        });
+    }
+});
+
+// Ruta para subir el CV
+app.post('/api/upload/cv', uploadCV.single('cv'), (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({
+                success: false,
+                error: 'No se proporcionó ningún archivo o el archivo no es un PDF válido'
+            });
+        }
+
+        // Devolver la URL del archivo con un timestamp para evitar el caché
+        const fileUrl = `/file/datos/documento/cv-personal.pdf?t=${Date.now()}`;
+        
+        res.status(200).json({
+            success: true,
+            message: 'CV subido correctamente',
+            fileUrl: fileUrl
+        });
+    } catch (error) {
+        console.error('Error al subir el CV:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Error al procesar el CV',
+            details: error.message
+        });
+    }
+});
+
 // Ruta para verificar que los archivos estáticos se están sirviendo correctamente
 app.get('/check-files', (req, res) => {
     res.json({
@@ -69,6 +191,56 @@ app.get('/', (req, res) => {
 
 // Configuración de rutas API
 const router = express.Router();
+
+// Ruta para subir archivos (foto o CV)
+router.post('/upload/:tipo', upload.single('archivo'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: 'No se ha proporcionado ningún archivo' });
+        }
+
+        const fileUrl = `/file/datos/${req.file.filename}`;
+        const fullUrl = `${req.protocol}://${req.get('host')}${fileUrl}`;
+        
+        res.status(200).json({
+            mensaje: 'Archivo subido correctamente',
+            url: fullUrl,
+            nombre: req.file.filename,
+            tipo: req.file.mimetype,
+            size: req.file.size
+        });
+    } catch (error) {
+        console.error('Error al subir el archivo:', error);
+        res.status(500).json({ 
+            error: 'Error al subir el archivo',
+            detalles: error.message 
+        });
+    }
+});
+
+// Ruta para obtener la URL de la foto o CV
+router.get('/archivo/:tipo', async (req, res) => {
+    try {
+        const tipo = req.params.tipo;
+        const filename = tipo === 'foto' ? 'foto-personal.png' : 'cv-personal.pdf';
+        const filePath = path.join(__dirname, 'file', 'datos', filename);
+        
+        // Verificar si el archivo existe
+        if (fs.existsSync(filePath)) {
+            const fileUrl = `/file/datos/${filename}`;
+            const fullUrl = `${req.protocol}://${req.get('host')}${fileUrl}`;
+            res.json({ url: fullUrl, existe: true });
+        } else {
+            res.json({ url: null, existe: false });
+        }
+    } catch (error) {
+        console.error('Error al obtener la URL del archivo:', error);
+        res.status(500).json({ 
+            error: 'Error al obtener la URL del archivo',
+            detalles: error.message 
+        });
+    }
+});
 
 // Middleware para el router de API
 router.use((req, res, next) => {
@@ -282,6 +454,80 @@ router.put('/datos-personales/:id', async (req, res) => {
 });
 
 
+
+// Ruta para subir la foto de perfil
+app.post('/api/upload/foto', upload.single('foto'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: 'No se proporcionó ningún archivo' });
+        }
+        
+        // Construir la URL completa del archivo
+        const fileUrl = `/file/datos/foto/foto-personal.png?t=${Date.now()}`;
+        
+        res.json({
+            success: true,
+            message: 'Foto subida correctamente',
+            fileUrl: fileUrl
+        });
+    } catch (error) {
+        console.error('Error al subir la foto:', error);
+        res.status(500).json({ 
+            error: 'Error al subir la foto',
+            details: error.message 
+        });
+    }
+});
+
+// Ruta para subir el CV
+app.post('/api/upload/cv', upload.single('archivo'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ 
+                success: false,
+                error: 'No se proporcionó ningún archivo o el archivo no es un PDF válido'
+            });
+        }
+        
+        // Construir la URL completa del archivo
+        const fileUrl = `/file/datos/documento/cv-personal.pdf?t=${Date.now()}`;
+        
+        res.json({
+            success: true,
+            message: 'CV subido correctamente',
+            fileUrl: fileUrl,
+            nombre: 'cv-personal.pdf',
+            size: req.file.size
+        });
+    } catch (error) {
+        console.error('Error al subir el CV:', error);
+        res.status(500).json({ 
+            success: false,
+            error: 'Error al subir el CV',
+            details: error.message 
+        });
+    }
+});
+
+// Asegurarse de que los directorios existan al iniciar el servidor
+const ensureDirectories = () => {
+    const dirs = [
+        path.join(__dirname, 'file/datos/foto'),
+        path.join(__dirname, 'file/datos/documento')
+    ];
+    
+    dirs.forEach(dir => {
+        if (!fs.existsSync(dir)) {
+            fs.mkdirSync(dir, { recursive: true });
+            console.log(`Directorio creado: ${dir}`);
+        } else {
+            console.log(`El directorio ya existe: ${dir}`);
+        }
+    });
+};
+
+// Crear directorios al iniciar
+ensureDirectories();
 
 // Montar el router en la ruta /api
 app.use('/api', router);
