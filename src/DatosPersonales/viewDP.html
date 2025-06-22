@@ -144,7 +144,7 @@
     <script>
         // Variable global para mantener el registro actual
         let registroActual = null;
-        const API_URL = 'http://localhost:3000/api'; // URL base de la API
+        const API_URL = 'http://localhost:3001/api'; // URL base de la API
 
         // Inicializar el modal de Bootstrap
         let previewModal = null;
@@ -623,7 +623,7 @@
             formData.append('foto', file);
 
             try {
-                const response = await fetch('http://localhost:3000/api/upload/foto', {
+                const response = await fetch('http://localhost:3001/api/upload/foto', {
                     method: 'POST',
                     body: formData
                     // No establecer Content-Type, dejar que el navegador lo haga con el boundary
@@ -702,7 +702,7 @@
             formData.append('cv', file);
 
             try {
-                const response = await fetch('http://localhost:3000/api/upload/cv', {
+                const response = await fetch('http://localhost:3001/api/upload/cv', {
                     method: 'POST',
                     body: formData
                 });
@@ -888,7 +888,7 @@
                     
                     // Mostrar el archivo subido
                     if (fileType === 'image') {
-                        previewContent.innerHTML = `<img src="${result.url}" alt="Vista previa de la imagen" class="max-w-full max-h-[70vh] mx-auto">`;
+                        previewContent.innerHTML = `<img src="${result.url}" alt="Vista previa de la imagen" class="max-w-full max-h-[85vh] mx-auto">`;
                     } else {
                         previewContent.innerHTML = `<embed src="${result.url}#toolbar=0&navpanes=0&scrollbar=0" type="application/pdf" class="w-full h-[70vh] border">`;
                     }
@@ -910,7 +910,7 @@
                     // Restaurar la vista previa anterior si hay un error
                     if (currentFileUrl) {
                         if (fileType === 'image') {
-                            previewContent.innerHTML = `<img src="${currentFileUrl}" alt="Vista previa de la imagen" class="max-w-full max-h-[70vh] mx-auto">`;
+                            previewContent.innerHTML = `<img src="${currentFileUrl}" alt="Vista previa de la imagen" class="max-w-full max-h-[85vh] mx-auto">`;
                         } else {
                             previewContent.innerHTML = `<embed src="${currentFileUrl}#toolbar=0&navpanes=0&scrollbar=0" type="application/pdf" class="w-full h-[70vh] border">`;
                         }
@@ -1073,7 +1073,13 @@
                 }
 
                 console.log('Actualización exitosa:', responseData);
-                return responseData;
+                
+                // Asegurarse de devolver los datos en el formato esperado
+                if (responseData.success && responseData.data) {
+                    return responseData.data; // Devolver solo los datos del registro
+                }
+                
+                return responseData; // Por si acaso el formato es diferente
             } catch (error) {
                 console.error('Error al actualizar datos personales:', {
                     error: error.message,
@@ -1192,6 +1198,14 @@
 
     <!-- Estilos mejorados para los modales -->
     <style>
+        /* Estilo para la imagen en el modal de previsualización */
+        #previewContent img {
+            max-height: 90vh !important;
+            width: auto !important;
+            max-width: 100% !important;
+            margin: 0 auto !important;
+            display: block !important;
+        }
         /* Estilos base del modal */
         .modal {
             display: none;
