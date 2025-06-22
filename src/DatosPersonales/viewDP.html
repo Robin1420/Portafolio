@@ -312,8 +312,8 @@
                 
                 // Obtener URLs de los archivos con timestamp para evitar caché
                 const timestamp = new Date().getTime();
-                const fotoUrl = `/file/datos/foto/foto-personal.png?t=${timestamp}`;
-                const cvUrl = `/file/datos/documento/cv-personal.pdf?t=${timestamp}`;
+                const fotoUrl = `http://localhost:3001/file/datos/foto/foto-personal.png?t=${timestamp}`;
+                const cvUrl = `http://localhost:3001/file/datos/documento/cv-personal.pdf?t=${timestamp}`;
                 
                 // Verificar si los archivos existen
                 const [fotoExiste, cvExiste] = await Promise.all([
@@ -358,12 +358,12 @@
                         nombreCell.innerHTML = `
                             <div class="flex items-center">
                                 <div class="flex-shrink-0 h-10 w-10">
-                                    <button onclick="openPreviewModal('${fotoExiste ? fotoUrl : '/src/assets/placeholder-user.jpg'}', 'Foto de Perfil', 'image')" 
+                                    <button onclick="openPreviewModal('${fotoExiste ? fotoUrl : 'https://via.placeholder.com/150'}', 'Foto de Perfil', 'image')" 
                                             class="focus:outline-none hover:opacity-90 transition-opacity">
                                         <img class="h-10 w-10 rounded-full object-cover" 
-                                             src="${fotoExiste ? fotoUrl : '/src/assets/placeholder-user.jpg'}" 
+                                             src="${fotoExiste ? fotoUrl : 'https://via.placeholder.com/150'}" 
                                              alt="Foto de perfil"
-                                             onerror="this.src='/src/assets/placeholder-user.jpg'">
+                                             onerror="this.src='https://via.placeholder.com/150'">
                                     </button>
                                 </div>
                                 <div class="ml-4">
@@ -392,7 +392,7 @@
                         const cvCell = document.createElement('td');
                         cvCell.className = 'px-6 py-4 whitespace-nowrap';
                         cvCell.innerHTML = `
-                            <button onclick="openPreviewModal('/file/datos/documento/cv-personal.pdf', 'Documento', 'pdf')" 
+                            <button onclick="openPreviewModal('http://localhost:3001/file/datos/documento/cv-personal.pdf', 'Documento', 'pdf')" 
                                     class="text-blue-600 hover:text-blue-800 flex items-center focus:outline-none">
                                 <i class="fas fa-file-pdf mr-2 text-red-500"></i>
                                 Documento
@@ -448,12 +448,12 @@
                         card.innerHTML = `
                             <div class="p-4">
                                 <div class="flex items-start">
-                                    <button onclick="openPreviewModal('${fotoExiste ? fotoUrl : '/src/assets/placeholder-user.jpg'}', 'Foto de Perfil', 'image')" 
+                                    <button onclick="openPreviewModal('${fotoExiste ? fotoUrl : 'https://via.placeholder.com/150'}', 'Foto de Perfil', 'image')" 
                                             class="focus:outline-none hover:opacity-90 transition-opacity">
-                                        <img src="${fotoExiste ? fotoUrl : '/src/assets/placeholder-user.jpg'}" 
+                                        <img src="${fotoExiste ? fotoUrl : 'https://via.placeholder.com/150'}" 
                                              alt="Foto de perfil" 
                                              class="h-12 w-12 rounded-full object-cover mr-3 flex-shrink-0"
-                                             onerror="this.src='/src/assets/placeholder-user.jpg'">
+                                             onerror="this.src='https://via.placeholder.com/150'">
                                     </button>
                                     <div class="flex-1">
                                         <h3 class="text-lg font-medium text-gray-900">${registro.nombre || 'Sin nombre'}</h3>
@@ -535,53 +535,7 @@
         let currentFileType = ''; // 'image' o 'pdf'
         let currentFileUrl = '';
         
-        // Función para cerrar el modal de previsualización
-        function closePreviewModal() {
-            const modal = document.getElementById('previewModal');
-            if (!modal) return;
-            
-            // 1. Intentar con Bootstrap 5
-            if (typeof bootstrap !== 'undefined') {
-                try {
-                    const bsModal = bootstrap.Modal.getInstance(modal) || new bootstrap.Modal(modal);
-                    bsModal.hide();
-                } catch (e) {
-                    console.warn('Error al cerrar con Bootstrap:', e);
-                }
-            }
-            
-            // 2. Forzar cierre manual
-            modal.style.display = 'none';
-            modal.classList.remove('show');
-            modal.setAttribute('aria-hidden', 'true');
-            modal.removeAttribute('aria-modal');
-            modal.removeAttribute('role');
-            modal.removeAttribute('style');
-            
-            // 3. Limpiar clases
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
-            
-            // 4. Limpiar el backdrop
-            const backdrops = document.querySelectorAll('.modal-backdrop');
-            backdrops.forEach(backdrop => {
-                backdrop.parentNode.removeChild(backdrop);
-            });
-            
-            // 5. Restaurar el body
-            document.body.classList.remove('modal-open');
-            document.body.style.overflow = 'auto';
-            document.body.style.paddingRight = '';
-            
-            // 6. Limpiar contenido
-            const previewContent = document.getElementById('previewContent');
-            if (previewContent) {
-                previewContent.innerHTML = '';
-            }
-            
-            // 7. Forzar actualización del DOM
-            void modal.offsetHeight;
-        }
+        // La función closePreviewModal ha sido movida más abajo en el archivo
 
         // Cerrar el modal al hacer clic fuera del contenido
         document.getElementById('previewModal').addEventListener('click', function(e) {
@@ -740,22 +694,33 @@
                 // Recargar los datos para actualizar la vista
                 await cargarDatos();
                 
-                // Cerrar el modal después de un pequeño retraso
-                await new Promise(resolve => setTimeout(resolve, 300));
-                closePreviewModal();
-                
-                // Forzar una actualización del DOM
+                // Cerrar el modal de manera forzada
                 const modal = document.getElementById('previewModal');
                 if (modal) {
+                    // Ocultar el modal
                     modal.style.display = 'none';
                     modal.classList.add('hidden');
-                    document.body.classList.remove('modal-open');
+                    modal.classList.remove('flex');
+                    modal.setAttribute('aria-hidden', 'true');
+                    
+                    // Limpiar el contenido del modal
+                    const previewContent = document.getElementById('previewContent');
+                    if (previewContent) {
+                        previewContent.innerHTML = '';
+                    }
                     
                     // Limpiar cualquier backdrop que haya quedado
                     const backdrops = document.querySelectorAll('.modal-backdrop');
                     backdrops.forEach(backdrop => {
                         backdrop.parentNode.removeChild(backdrop);
                     });
+                    
+                    // Restaurar el scroll del body
+                    document.body.style.overflow = 'auto';
+                    document.body.style.paddingRight = '';
+                    document.body.classList.remove('modal-open');
+                    
+                    console.log('Modal cerrado forzadamente');
                 }
 
             } catch (error) {
@@ -875,7 +840,7 @@
                     formData.append(tipo, file); // Agregar con el nombre correcto
                     
                     // Enviar el archivo al servidor
-                    const response = await fetch(`/api/upload/${tipo}`, {
+                    const response = await fetch(`http://localhost:3001/api/upload/${tipo}`, {
                         method: 'POST',
                         body: formData
                     });
@@ -932,10 +897,46 @@
         // Función para cerrar el modal de previsualización
         function closePreviewModal() {
             const modal = document.getElementById('previewModal');
+            if (!modal) return;
+            
+            // 1. Intentar con Bootstrap 5
+            if (typeof bootstrap !== 'undefined') {
+                try {
+                    const bsModal = bootstrap.Modal.getInstance(modal) || new bootstrap.Modal(modal);
+                    bsModal.hide();
+                } catch (e) {
+                    console.warn('Error al cerrar con Bootstrap:', e);
+                }
+            }
+            
+            // 2. Forzar cierre manual
+            modal.style.display = 'none';
+            modal.classList.remove('show');
+            modal.setAttribute('aria-hidden', 'true');
+            modal.removeAttribute('aria-modal');
+            modal.removeAttribute('role');
+            modal.removeAttribute('style');
+            
+            // 3. Limpiar clases
             modal.classList.add('hidden');
             modal.classList.remove('flex');
-            document.body.classList.remove('overflow-hidden');
-            modal.setAttribute('aria-hidden', 'true');
+            
+            // 4. Limpiar el backdrop
+            const backdrops = document.querySelectorAll('.modal-backdrop');
+            backdrops.forEach(backdrop => {
+                backdrop.parentNode.removeChild(backdrop);
+            });
+            
+            // 5. Restaurar el body
+            document.body.classList.remove('modal-open');
+            document.body.style.overflow = 'auto';
+            document.body.style.paddingRight = '';
+            
+            // 6. Limpiar contenido
+            const previewContent = document.getElementById('previewContent');
+            if (previewContent) {
+                previewContent.innerHTML = '';
+            }
         }
 
         // Función para editar un registro
