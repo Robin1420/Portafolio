@@ -640,7 +640,10 @@ exports.updateProyectos = async (req, res) => {
             }
             if (visible !== undefined) {
                 setClauses.push('visible = @visible');
-                params.visible = { value: visible, type: sql.Bit };
+                // Asegurarse de que el valor sea 0 o 1 para el tipo BIT
+                const visibleValue = visible === true || visible === 'true' || visible === 1 || visible === '1' ? 1 : 0;
+                params.visible = { value: visibleValue, type: sql.Bit };
+                console.log('Valor de visible convertido:', visibleValue, 'Tipo:', typeof visibleValue);
             }
             
             // Si no hay campos para actualizar

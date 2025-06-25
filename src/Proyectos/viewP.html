@@ -1,290 +1,567 @@
 <!DOCTYPE html>
 <html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Gestión de Proyectos</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
     <style>
-        .project-image {
-            width: 100%;
-            height: 180px;
-            object-fit: cover;
-            border-radius: 0.5rem 0.5rem 0 0;
-        }
-        .card-hover:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
-            transition: all 0.3s ease;
-        }
+      .project-image {
+        width: 100%;
+        height: 180px;
+        object-fit: cover;
+        border-radius: 0.5rem 0.5rem 0 0;
+      }
+      /* Contenedor de la cuadrícula de proyectos */
+      #projectsGrid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 1.5rem;
+        align-items: stretch;
+      }
+
+      /* Estilo base para las tarjetas de proyecto */
+      .project-card {
+        position: relative;
+        background: white;
+        border-radius: 0.5rem;
+        overflow: visible;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), 
+                    box-shadow 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        z-index: 1;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        transform: scale(1);
+      }
+
+      /* Clase para cuando una tarjeta está siendo hover */
+      .project-card.hover-active {
+        transform: scale(1.05);
+        box-shadow: 0 14px 28px rgba(0,0,0,0.12), 0 10px 10px rgba(0,0,0,0.08);
+        z-index: 10;
+      }
+
+      /* Clase para cuando otra tarjeta está siendo hover */
+      .project-card.hover-inactive {
+        transform: scale(0.98);
+      }
+
+      .project-card .description {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        -moz-box-orient: vertical;
+        -ms-box-orient: vertical;
+        line-clamp: 2;
+        overflow: hidden;
+        margin: 0;
+        transition: all 0.3s ease;
+        position: relative;
+      }
+
+      .project-card:hover .description {
+        -webkit-line-clamp: unset;
+        line-clamp: unset;
+        overflow: visible;
+      }
+
+      .project-card .gradient-overlay {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 2.5rem;
+        background: linear-gradient(to top, white, transparent);
+        pointer-events: none;
+        transition: opacity 0.3s ease, transform 0.3s ease;
+      }
+
+      .project-card:hover .gradient-overlay {
+        opacity: 0;
+        transform: translateY(5px);
+      }
+      
+      /* Mejora la transición para el contenedor de la descripción */
+      .project-card .description-container {
+        transition: height 0.3s ease;
+        will-change: height;
+      }
     </style>
-</head>
-<body class="bg-gray-50">
+  </head>
+  <body class="bg-gray-50">
     <div class="container mx-auto px-4 py-8">
-        <!-- Header -->
-        <div class="flex flex-col md:flex-row justify-between items-center mb-8">
-            <h1 class="text-3xl font-bold text-gray-800 mb-4 md:mb-0">Gestión de Proyectos</h1>
-            <button id="btnNuevoProyecto" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg flex items-center">
-                <i class="fas fa-plus mr-2"></i> Nuevo Proyecto
-            </button>
+      <!-- Header -->
+      <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-800 mb-4">
+          Gestión de Proyectos
+        </h1>
+      </div>
+
+      <!-- Projects Grid -->
+      <div
+        id="projectsGrid"
+        class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+      >
+        <!-- Projects will be loaded here dynamically -->
+        <div class="text-center py-10 text-gray-500">
+          <i class="fas fa-spinner fa-spin text-4xl mb-2"></i>
+          <p>Cargando proyectos...</p>
         </div>
 
-        <!-- Projects Grid -->
-        <div id="projectsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            <!-- Projects will be loaded here dynamically -->
-            <div class="text-center py-10 text-gray-500">
-                <i class="fas fa-spinner fa-spin text-4xl mb-2"></i>
-                <p>Cargando proyectos...</p>
+        <!-- Botón de Agregar Proyecto (se mantendrá al final) -->
+        <div
+          id="addProjectCard"
+          class="bg-white rounded-lg shadow-md overflow-hidden border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:border-blue-400 transition-colors duration-200 min-h-[300px]"
+          onclick="mostrarFormularioNuevo()"
+        >
+          <div class="text-center p-6">
+            <div
+              class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4"
+            >
+              <i class="fas fa-plus text-blue-600 text-2xl"></i>
             </div>
+            <h3 class="text-lg font-medium text-gray-800 mb-1">
+              Agregar Proyecto
+            </h3>
+            <p class="text-sm text-gray-500">
+              Haz clic para crear un nuevo proyecto
+            </p>
+          </div>
         </div>
+      </div>
     </div>
 
     <!-- Modal Nuevo/Editar Proyecto -->
-    <div id="modalProyecto" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
-        <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div class="flex justify-between items-center border-b p-4">
-                <h3 class="text-xl font-semibold text-gray-800" id="modalTitle">Nuevo Proyecto</h3>
-                <button id="btnCerrarModal" class="text-gray-500 hover:text-gray-700">
-                    <i class="fas fa-times text-2xl"></i>
-                </button>
-            </div>
-            <form id="formProyecto" class="p-6" enctype="multipart/form-data">
-                <input type="hidden" id="proyectoId">
-                
-                <div class="mb-6">
-                    <label class="block text-gray-700 text-sm font-medium mb-2" for="nombre">
-                        Nombre del Proyecto <span class="text-red-500">*</span>
-                    </label>
-                    <input type="text" id="nombre" name="nombre" required
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                </div>
-
-                <div class="mb-6">
-                    <label class="block text-gray-700 text-sm font-medium mb-2" for="descripcion">
-                        Descripción
-                    </label>
-                    <textarea id="descripcion" name="descripcion" rows="3"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                    <div>
-                        <label class="block text-gray-700 text-sm font-medium mb-2" for="fechaInicio">
-                            Fecha de Inicio
-                        </label>
-                        <input type="date" id="fechaInicio" name="fechaInicio"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    </div>
-                    <div class="flex items-center">
-                        <input type="checkbox" id="visible" name="visible" 
-                               class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
-                        <label for="visible" class="ml-2 block text-sm text-gray-700">
-                            Visible en el portafolio
-                        </label>
-                    </div>
-                </div>
-
-                <div class="mb-6">
-                    <label class="block text-gray-700 text-sm font-medium mb-2" for="tecnologias">
-                        Tecnologías (separadas por comas)
-                    </label>
-                    <input type="text" id="tecnologias" name="tecnologias"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Ej: React, Node.js, MongoDB">
-                </div>
-
-                <div class="mb-6">
-                    <label class="block text-gray-700 text-sm font-medium mb-2" for="enlaceDemo">
-                        Enlace al Proyecto
-                    </label>
-                    <input type="url" id="enlaceDemo" name="enlaceDemo"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="https://ejemplo.com">
-                </div>
-                <div class="mb-6">
-                    <label class="block text-gray-700 text-sm font-medium mb-2" for="enlaceCodigo">
-                        Enlace al GitHub
-                    </label>
-                    <input type="url" id="enlaceCodigo" name="enlaceCodigo"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="https://ejemplo.com">
-                </div>
-
-                <div class="mb-6">
-                    <label class="block text-gray-700 text-sm font-medium mb-2">
-                        Imagen del Proyecto
-                    </label>
-                    <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
-                        <div class="space-y-1 text-center">
-                            <div class="flex text-sm text-gray-600">
-                                <label for="imagen" class="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none">
-                                    <span>Subir archivo</span>
-                                    <input id="imagen" name="imagen" type="file" class="sr-only" accept="image/*">
-                                </label>
-                                <p class="pl-1">o arrastrar y soltar</p>
-                            </div>
-                            <p class="text-xs text-gray-500">
-                                PNG, JPG, GIF hasta 5MB
-                            </p>
-                        </div>
-                    </div>
-                    <div id="imagenPreview" class="mt-4 hidden">
-                        <p class="text-sm font-medium text-gray-700 mb-2">Vista previa:</p>
-                        <img id="imagenPreviewImg" src="#" alt="Vista previa de la imagen" class="max-h-40 rounded-md">
-                    </div>
-                </div>
-
-                <div class="flex justify-end space-x-3 pt-4 border-t">
-                    <button type="button" id="btnCancelar" class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
-                        Cancelar
-                    </button>
-                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
-                        Guardar Proyecto
-                    </button>
-                </div>
-            </form>
+    <div
+      id="modalProyecto"
+      class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4"
+    >
+      <div
+        class="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+      >
+        <div class="flex justify-between items-center border-b p-4">
+          <h3 class="text-xl font-semibold text-gray-800" id="modalTitle">
+            Nuevo Proyecto
+          </h3>
+          <button id="btnCerrarModal" class="text-gray-500 hover:text-gray-700">
+            <i class="fas fa-times text-2xl"></i>
+          </button>
         </div>
+        <form id="formProyecto" class="p-6" enctype="multipart/form-data">
+          <input type="hidden" id="proyectoId" />
+
+          <div class="mb-6">
+            <label
+              class="block text-gray-700 text-sm font-medium mb-2"
+              for="nombre"
+            >
+              Nombre del Proyecto <span class="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              id="nombre"
+              name="nombre"
+              required
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div class="mb-6">
+            <label
+              class="block text-gray-700 text-sm font-medium mb-2"
+              for="descripcion"
+            >
+              Descripción
+            </label>
+            <textarea
+              id="descripcion"
+              name="descripcion"
+              rows="3"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            ></textarea>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div>
+              <label
+                class="block text-gray-700 text-sm font-medium mb-2"
+                for="fechaInicio"
+              >
+                Fecha de Inicio
+              </label>
+              <input
+                type="date"
+                id="fechaInicio"
+                name="fechaInicio"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div class="flex items-center">
+              <input
+                type="checkbox"
+                id="visible"
+                name="visible"
+                class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <label for="visible" class="ml-2 block text-sm text-gray-700">
+                Visible en el portafolio
+              </label>
+            </div>
+          </div>
+
+          <div class="mb-6">
+            <label
+              class="block text-gray-700 text-sm font-medium mb-2"
+              for="tecnologias"
+            >
+              Tecnologías (separadas por comas)
+            </label>
+            <input
+              type="text"
+              id="tecnologias"
+              name="tecnologias"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Ej: React, Node.js, MongoDB"
+            />
+          </div>
+
+          <div class="mb-6">
+            <label
+              class="block text-gray-700 text-sm font-medium mb-2"
+              for="enlaceDemo"
+            >
+              Enlace al Proyecto
+            </label>
+            <input
+              type="url"
+              id="enlaceDemo"
+              name="enlaceDemo"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="https://ejemplo.com"
+            />
+          </div>
+          <div class="mb-6">
+            <label
+              class="block text-gray-700 text-sm font-medium mb-2"
+              for="enlaceCodigo"
+            >
+              Enlace al GitHub
+            </label>
+            <input
+              type="url"
+              id="enlaceCodigo"
+              name="enlaceCodigo"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="https://ejemplo.com"
+            />
+          </div>
+
+          <div class="mb-6">
+            <label class="block text-gray-700 text-sm font-medium mb-2">
+              Imagen del Proyecto
+            </label>
+            <div
+              class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md"
+            >
+              <div class="space-y-1 text-center">
+                <div class="flex text-sm text-gray-600">
+                  <label
+                    for="imagen"
+                    class="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none"
+                  >
+                    <span>Subir archivo</span>
+                    <input
+                      id="imagen"
+                      name="imagen"
+                      type="file"
+                      class="sr-only"
+                      accept="image/*"
+                    />
+                  </label>
+                  <p class="pl-1">o arrastrar y soltar</p>
+                </div>
+                <p class="text-xs text-gray-500">PNG, JPG, GIF hasta 5MB</p>
+              </div>
+            </div>
+            <div id="imagenPreview" class="mt-4 hidden">
+              <p class="text-sm font-medium text-gray-700 mb-2">
+                Vista previa:
+              </p>
+              <img
+                id="imagenPreviewImg"
+                src="#"
+                alt="Vista previa de la imagen"
+                class="max-h-40 rounded-md"
+              />
+            </div>
+          </div>
+
+          <div class="flex justify-end space-x-3 pt-4 border-t">
+            <button
+              type="button"
+              id="btnCancelar"
+              class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            >
+              Guardar Proyecto
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
 
     <!-- Modal Eliminar -->
-    <div id="modalEliminar" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
-        <div class="bg-white rounded-lg shadow-xl w-full max-w-md">
-            <div class="p-6">
-                <div class="text-center">
-                    <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
-                        <i class="fas fa-exclamation text-red-600 text-xl"></i>
-                    </div>
-                    <h3 class="mt-3 text-lg font-medium text-gray-900">¿Eliminar proyecto?</h3>
-                    <div class="mt-2">
-                        <p class="text-sm text-gray-500">
-                            ¿Estás seguro de que deseas eliminar este proyecto? Esta acción no se puede deshacer.
-                        </p>
-                    </div>
-                </div>
-                <div class="mt-5 flex justify-end space-x-3">
-                    <button type="button" id="btnCancelarEliminar" class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
-                        Cancelar
-                    </button>
-                    <button type="button" id="btnConfirmarEliminar" class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">
-                        Eliminar
-                    </button>
-                </div>
+    <div
+      id="modalEliminar"
+      class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4"
+    >
+      <div class="bg-white rounded-lg shadow-xl w-full max-w-md">
+        <div class="p-6">
+          <div class="text-center">
+            <div
+              class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100"
+            >
+              <i class="fas fa-exclamation text-red-600 text-xl"></i>
             </div>
+            <h3 class="mt-3 text-lg font-medium text-gray-900">
+              ¿Eliminar proyecto?
+            </h3>
+            <div class="mt-2">
+              <p class="text-sm text-gray-500">
+                ¿Estás seguro de que deseas eliminar este proyecto? Esta acción
+                no se puede deshacer.
+              </p>
+            </div>
+          </div>
+          <div class="mt-5 flex justify-end space-x-3">
+            <button
+              type="button"
+              id="btnCancelarEliminar"
+              class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              id="btnConfirmarEliminar"
+              class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+            >
+              Eliminar
+            </button>
+          </div>
         </div>
+      </div>
     </div>
 
     <script>
-        // Variables globales
-        const API_URL = 'http://localhost:3001/api/proyectos';
-        let proyectos = [];
-        let proyectoActual = null;
-        const IMG_BASE_URL = '../../file/proyectos/';
+      // Variables globales
+      const API_URL = "http://localhost:3001/api/proyectos";
+      let proyectos = [];
+      let proyectoActual = null;
+      const IMG_BASE_URL = "../../file/proyectos/";
 
-        // Elementos del DOM
-        const projectsGrid = document.getElementById('projectsGrid');
-        const modalProyecto = document.getElementById('modalProyecto');
-        const modalEliminar = document.getElementById('modalEliminar');
-        const formProyecto = document.getElementById('formProyecto');
-        const btnNuevoProyecto = document.getElementById('btnNuevoProyecto');
-        const btnCerrarModal = document.getElementById('btnCerrarModal');
-        const btnCancelar = document.getElementById('btnCancelar');
-        const btnCancelarEliminar = document.getElementById('btnCancelarEliminar');
-        const btnConfirmarEliminar = document.getElementById('btnConfirmarEliminar');
-        const imagenInput = document.getElementById('imagen');
-        const imagenPreview = document.getElementById('imagenPreview');
-        const imagenPreviewImg = document.getElementById('imagenPreviewImg');
-        
-        // Función para inicializar los event listeners
-        function initEventListeners() {
-            // Solo inicializar los listeners una vez
-            if (window.eventListenersInitialized) return;
-            
-            // Prevenir el envío predeterminado del formulario y manejar múltiples clics
-            const form = document.getElementById('formProyecto');
-            let isSubmitting = false;
-            
-            // Remover cualquier listener previo para evitar duplicados
-            const newForm = form.cloneNode(true);
-            form.parentNode.replaceChild(newForm, form);
-            
-            // Agregar el nuevo listener
-            newForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                
-                // Evitar múltiples envíos
-                if (isSubmitting) {
-                    console.log('El formulario ya se está enviando...');
-                    return;
-                }
-                
-                // Deshabilitar el botón de enviar
-                const submitButton = newForm.querySelector('button[type="submit"]');
-                const originalButtonText = submitButton.innerHTML;
-                
-                try {
-                    isSubmitting = true;
-                    submitButton.disabled = true;
-                    submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
-                    
-                    await guardarProyecto(e);
-                } catch (error) {
-                    console.error('Error al enviar el formulario:', error);
-                    mostrarAlerta('error', 'Error al enviar el formulario: ' + (error.message || 'Error desconocido'));
-                } finally {
-                    // Restaurar el botón
-                    if (submitButton) {
-                        submitButton.disabled = false;
-                        submitButton.innerHTML = originalButtonText;
-                    }
-                    isSubmitting = false;
-                }
-            });
-            
-            // Marcar como inicializado
-            window.eventListenersInitialized = true;
-        }
-        
-        // Inicializar los event listeners cuando el DOM esté listo
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => {
-                initEventListeners();
-                cargarProyectos();
-            });
-        } else {
-            initEventListeners();
-            cargarProyectos();
-        }
-        btnNuevoProyecto.addEventListener('click', mostrarFormularioNuevo);
-        btnCerrarModal.addEventListener('click', cerrarModal);
-        btnCancelar.addEventListener('click', cerrarModal);
-        btnCancelarEliminar.addEventListener('click', () => modalEliminar.classList.add('hidden'));
-        btnConfirmarEliminar.addEventListener('click', eliminarProyecto);
-        formProyecto.addEventListener('submit', guardarProyecto);
-        if (imagenInput) {
-            imagenInput.addEventListener('change', mostrarVistaPreviaImagen);
+      // Elementos del DOM
+      const projectsGrid = document.getElementById("projectsGrid");
+      const modalProyecto = document.getElementById("modalProyecto");
+      const modalEliminar = document.getElementById("modalEliminar");
+      const formProyecto = document.getElementById("formProyecto");
+      const btnNuevoProyecto = document.getElementById("btnNuevoProyecto");
+      const btnCerrarModal = document.getElementById("btnCerrarModal");
+      const btnCancelar = document.getElementById("btnCancelar");
+      const btnCancelarEliminar = document.getElementById(
+        "btnCancelarEliminar"
+      );
+      const btnConfirmarEliminar = document.getElementById(
+        "btnConfirmarEliminar"
+      );
+      const imagenInput = document.getElementById("imagen");
+      const imagenPreview = document.getElementById("imagenPreview");
+      const imagenPreviewImg = document.getElementById("imagenPreviewImg");
+
+      // Función para inicializar los event listeners
+      function initEventListeners() {
+        // Solo inicializar los listeners una vez
+        if (window.eventListenersInitialized) return;
+
+        // 1. Configurar el formulario de proyecto
+        const form = document.getElementById("formProyecto");
+        let isSubmitting = false;
+
+        if (form) {
+          // Remover cualquier listener previo para evitar duplicados
+          const newForm = form.cloneNode(true);
+          form.parentNode.replaceChild(newForm, form);
+
+          // Agregar el nuevo listener
+          newForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+
+            // Evitar múltiples envíos
+            if (isSubmitting) {
+              console.log("El formulario ya se está enviando...");
+              return;
+            }
+
+            // Deshabilitar el botón de enviar
+            const submitButton = newForm.querySelector('button[type="submit"]');
+            const originalButtonText = submitButton.innerHTML;
+
+            try {
+              isSubmitting = true;
+              submitButton.disabled = true;
+              submitButton.innerHTML =
+                '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+
+              await guardarProyecto(e);
+            } catch (error) {
+              console.error("Error al enviar el formulario:", error);
+              mostrarAlerta(
+                "error",
+                "Error al enviar el formulario: " +
+                  (error.message || "Error desconocido")
+              );
+            } finally {
+              // Restaurar el botón
+              if (submitButton) {
+                submitButton.disabled = false;
+                submitButton.innerHTML = originalButtonText;
+              }
+              isSubmitting = false;
+            }
+          });
         }
 
-        // Cerrar modal al hacer clic fuera del contenido
-        modalProyecto.addEventListener('click', (e) => {
-            if (e.target === modalProyecto) cerrarModal();
+        // 2. Configurar botones del modal de proyecto
+        if (btnNuevoProyecto) {
+          btnNuevoProyecto.addEventListener("click", mostrarFormularioNuevo);
+        }
+
+        if (btnCerrarModal) {
+          btnCerrarModal.addEventListener("click", cerrarModal);
+        }
+
+        if (btnCancelar) {
+          btnCancelar.addEventListener("click", cerrarModal);
+        }
+
+        // 3. Configurar botones del modal de confirmación de eliminación
+        if (btnConfirmarEliminar) {
+          btnConfirmarEliminar.addEventListener("click", eliminarProyecto);
+        }
+
+        if (btnCancelarEliminar) {
+          btnCancelarEliminar.addEventListener("click", () => {
+            const modalEliminar = document.getElementById("modalEliminar");
+            if (modalEliminar) {
+              modalEliminar.classList.add("hidden");
+              modalEliminar.classList.remove("flex");
+              document.body.style.overflow = "auto";
+            }
+          });
+        }
+
+        // 4. Configurar cierre de modales al hacer clic fuera
+        if (modalProyecto) {
+          modalProyecto.addEventListener("click", (e) => {
+            if (e.target === modalProyecto) {
+              cerrarModal();
+            }
+          });
+        }
+
+        const modalEliminar = document.getElementById("modalEliminar");
+        if (modalEliminar) {
+          modalEliminar.addEventListener("click", (e) => {
+            if (e.target === modalEliminar) {
+              modalEliminar.classList.add("hidden");
+              modalEliminar.classList.remove("flex");
+              document.body.style.overflow = "auto";
+            }
+          });
+        }
+
+        // 5. Configurar vista previa de imagen
+        if (imagenInput && imagenPreviewImg) {
+          imagenInput.addEventListener("change", mostrarVistaPreviaImagen);
+        }
+
+        // Marcar como inicializado
+        window.eventListenersInitialized = true;
+      }
+
+      // Inicializar los event listeners cuando el DOM esté listo
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", () => {
+          initEventListeners();
+          // Cargar proyectos cuando la página esté lista
+          cargarProyectos().then(() => {
+            // Pequeño retraso para asegurar que el DOM esté listo
+            setTimeout(initHoverEffects, 100);
+          });
         });
-
-        modalEliminar.addEventListener('click', (e) => {
-            if (e.target === modalEliminar) modalEliminar.classList.add('hidden');
+      } else {
+        initEventListeners();
+        // Cargar proyectos si el DOM ya está listo
+        cargarProyectos().then(() => {
+          setTimeout(initHoverEffects, 100);
         });
+      }
 
-        // Funciones
-        // Funciones para mostrar/ocultar el indicador de carga
-        function showLoader(modalId) {
-            const modal = document.getElementById(modalId);
-            if (modal) {
-                const loader = document.createElement('div');
-                loader.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
-                loader.id = `${modalId}-loader`;
-                loader.innerHTML = `
+      // Función para manejar los efectos de hover
+      function initHoverEffects() {
+        const grid = document.getElementById('projectsGrid');
+        if (!grid) return;
+        
+        // Usar delegación de eventos para mejor rendimiento
+        grid.addEventListener('mouseover', function(e) {
+          const card = e.target.closest('.project-card');
+          if (!card) return;
+          
+          // Remover todas las clases primero
+          document.querySelectorAll('.project-card').forEach(c => {
+            c.classList.remove('hover-active', 'hover-inactive');
+          });
+          
+          // Añadir clase inactiva a todas las tarjetas excepto a la actual
+          document.querySelectorAll('.project-card:not(:hover)').forEach(c => {
+            c.classList.add('hover-inactive');
+          });
+          
+          // Añadir clase activa solo a la tarjeta actual
+          card.classList.add('hover-active');
+        });
+        
+        // Restablecer al salir del grid
+        grid.addEventListener('mouseleave', function() {
+          document.querySelectorAll('.project-card').forEach(c => {
+            c.classList.remove('hover-active', 'hover-inactive');
+          });
+        });
+      }
+
+      // Funciones
+      // Funciones para mostrar/ocultar el indicador de carga
+      function showLoader(modalId) {
+        const modal = document.getElementById(modalId);
+        if (modal) {
+          const loader = document.createElement("div");
+          loader.className =
+            "fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50";
+          loader.id = `${modalId}-loader`;
+          loader.innerHTML = `
                     <div class="bg-white p-4 rounded-lg shadow-lg">
                         <div class="flex items-center">
                             <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mr-3"></div>
@@ -292,363 +569,516 @@
                         </div>
                     </div>
                 `;
-                modal.appendChild(loader);
-            }
+          modal.appendChild(loader);
         }
+      }
 
-        function hideLoader(modalId) {
-            const loader = document.getElementById(`${modalId}-loader`);
-            if (loader && loader.parentNode) {
-                loader.parentNode.removeChild(loader);
-            }
+      function hideLoader(modalId) {
+        const loader = document.getElementById(`${modalId}-loader`);
+        if (loader && loader.parentNode) {
+          loader.parentNode.removeChild(loader);
         }
+      }
 
-        async function cargarProyectos() {
-            try {
-                const response = await fetch(API_URL);
-                if (!response.ok) throw new Error('Error al cargar los proyectos');
-                
-                proyectos = await response.json();
-                mostrarProyectos(proyectos);
-            } catch (error) {
-                console.error('Error:', error);
-                mostrarAlerta('error', 'No se pudieron cargar los proyectos');
-            }
+      async function cargarProyectos() {
+        try {
+          const response = await fetch(API_URL);
+          if (!response.ok) throw new Error("Error al cargar los proyectos");
+
+          proyectos = await response.json();
+          mostrarProyectos(proyectos);
+        } catch (error) {
+          console.error("Error:", error);
+          mostrarAlerta("error", "No se pudieron cargar los proyectos");
         }
+      }
 
-        function mostrarProyectos(proyectos) {
-            if (proyectos.length === 0) {
-                projectsGrid.innerHTML = `
+      function mostrarProyectos(proyectos) {
+        const projectsGrid = document.getElementById("projectsGrid");
+
+        // Limpiar el contenedor, pero mantener el botón de agregar
+        const addProjectCard = document.getElementById("addProjectCard");
+        projectsGrid.innerHTML = "";
+        projectsGrid.classList.add('relative'); // Asegurar que el contenedor sea relativo
+
+        if (proyectos.length === 0) {
+          // Si no hay proyectos, mostrar mensaje
+          projectsGrid.innerHTML = `
                     <div class="col-span-full text-center py-10">
                         <i class="fas fa-folder-open text-4xl text-gray-400 mb-2"></i>
                         <p class="text-gray-500">No hay proyectos registrados</p>
-                    </div>
-                `;
-                return;
-            }
+                    </div>`;
+        } else {
+          // Mostrar los proyectos
+          proyectos.forEach((proyecto) => {
+            const proyectoCard = document.createElement("div");
+            // Clases base para la tarjeta de proyecto
+            proyectoCard.className = 'project-card';
+            proyectoCard.dataset.projectId = proyecto.id;
+            // Asegurar que la tarjeta ocupe todo el espacio disponible
+            proyectoCard.style.flex = "1 0 auto";
+            // Forzar aceleración por hardware
+            proyectoCard.style.willChange = "transform, box-shadow";
+            proyectoCard.style.backfaceVisibility = "hidden";
 
+            // Construir el HTML de la tarjeta de proyecto
+            const tecnologiasHTML = proyecto.tecnologias
+              ? proyecto.tecnologias
+                  .split(",")
+                  .map(
+                    (t) =>
+                      `<span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">${t.trim()}</span>`
+                  )
+                  .join("")
+              : "";
 
-            projectsGrid.innerHTML = proyectos.map(proyecto => `
-                <div class="bg-white rounded-lg shadow-md overflow-hidden card-hover transition-all duration-300">
-                    <div class="relative">
-                        <img src="${IMG_BASE_URL}${proyecto.imagen || 'default-project.jpg'}" 
-                             alt="${proyecto.titulo}" 
-                             class="project-image" 
-                             onerror="this.onerror=null; this.src='https://via.placeholder.com/400x200?text=Imagen+no+disponible'">
-                        <div class="absolute top-2 right-2 flex space-x-1">
-                            <button onclick="editarProyecto(${proyecto.id})" class="p-1.5 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition-colors">
-                                <i class="fas fa-edit text-xs"></i>
-                            </button>
-                            <button onclick="confirmarEliminar(${proyecto.id})" class="p-1.5 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors">
-                                <i class="fas fa-trash-alt text-xs"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="p-4">
-                        <h3 class="font-semibold text-lg text-gray-800 mb-1 truncate">${proyecto.titulo}</h3>
-                        <p class="text-gray-600 text-sm mb-3 line-clamp-2">${proyecto.descripcion || 'Sin descripción'}</p>
-                        
-                        <div class="flex flex-wrap gap-1 mb-3">
-                            ${(proyecto.tecnologias ? proyecto.tecnologias.split(',').map(t => `
-                                <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">${t.trim()}</span>
-                            `).join('') : '')}
-                        </div>
-                        
-                        <div class="flex flex-col space-y-2 text-sm text-gray-500 mt-2">
-                            <div class="flex justify-between">
-                                <span>${formatearFecha(proyecto.fecha)}</span>
-                                <span class="px-2 py-0.5 rounded-full text-xs ${proyecto.visible == 1 ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}">
-                                    ${proyecto.visible == 1 ? 'Visible' : 'Oculto'}
-                                </span>
+            proyectoCard.innerHTML = `
+                        <div class="relative">
+                            <img src="${IMG_BASE_URL}${
+              proyecto.imagen || "default-project.jpg"
+            }" 
+                                 alt="${proyecto.titulo}" 
+                                 class="w-full h-48 object-cover"
+                                 onerror="this.onerror=null; this.src='https://via.placeholder.com/400x200?text=Imagen+no+disponible'"
+                            >
+                            <div class="absolute top-2 right-2 flex space-x-1">
+                                <button onclick="editarProyecto('${proyecto.id}')" 
+                                        class="bg-blue-100 text-blue-600 p-2 rounded-full hover:bg-blue-200 transition-colors">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button onclick="confirmarEliminar('${proyecto.id}')" 
+                                        class="bg-red-100 text-red-600 p-2 rounded-full hover:bg-red-200 transition-colors">
+                                    <i class="fas fa-trash"></i>
+                                </button>
                             </div>
-                            ${proyecto.enlace_demo ? `
-                                <div class="flex items-center">
-                                    <i class="fas fa-external-link-alt text-gray-400 mr-1"></i>
-                                    <a href="${proyecto.enlace_demo}" target="_blank" class="text-blue-600 hover:underline truncate" title="${proyecto.enlace_demo}">
-                                        Demo
-                                    </a>
-                                </div>
-                            ` : ''}
-                            ${proyecto.enlace_codigo ? `
-                                <div class="flex items-center">
-                                    <i class="fab fa-github text-gray-400 mr-1"></i>
-                                    <a href="${proyecto.enlace_codigo}" target="_blank" class="text-blue-600 hover:underline truncate" title="${proyecto.enlace_codigo}">
-                                        Código Fuente
-                                    </a>
-                                </div>
-                            ` : ''}
                         </div>
-                    </div>
-                </div>
-            `).join('');
+                        <div class="p-4">
+                            <h3 class="font-semibold text-lg text-gray-800 mb-1 truncate">${
+                              proyecto.titulo
+                            }</h3>
+                            <div class="relative" style="flex-grow: 1; min-height: 3rem;">
+                                <p class="text-gray-600 text-sm mb-3 description">
+                                    ${proyecto.descripcion || 'Sin descripción'}
+                                </p>
+                                <div class="gradient-overlay"></div>
+                            </div>
+                            
+                            ${
+                              tecnologiasHTML
+                                ? `
+                                <div class="flex flex-wrap gap-1 mb-3">
+                                    ${tecnologiasHTML}
+                                </div>
+                            `
+                                : ""
+                            }
+                            
+                            <div class="flex flex-col space-y-2 text-sm text-gray-500 mt-2">
+                                <div class="flex justify-between">
+                                    <span>${formatearFecha(
+                                      proyecto.fecha
+                                    )}</span>
+                                    <span class="px-2 py-0.5 rounded-full text-xs ${
+                                      proyecto.visible == 1
+                                        ? "bg-green-100 text-green-800"
+                                        : "bg-red-100 text-red-800"
+                                    }">
+                                        ${
+                                          proyecto.visible == 1
+                                            ? "Visible"
+                                            : "Oculto"
+                                        }
+                                    </span>
+                                </div>
+                                ${
+                                  proyecto.enlace_demo
+                                    ? `
+                                    <div class="flex items-center">
+                                        <i class="fas fa-external-link-alt text-gray-400 mr-1"></i>
+                                        <a href="${proyecto.enlace_demo}" target="_blank" class="text-blue-600 hover:underline truncate" title="${proyecto.enlace_demo}">
+                                            Demo
+                                        </a>
+                                    </div>
+                                `
+                                    : ""
+                                }
+                                ${
+                                  proyecto.enlace_codigo
+                                    ? `
+                                    <div class="flex items-center">
+                                        <i class="fab fa-github text-gray-400 mr-1"></i>
+                                        <a href="${proyecto.enlace_codigo}" target="_blank" class="text-blue-600 hover:underline truncate" title="${proyecto.enlace_codigo}">
+                                            Código Fuente
+                                        </a>
+                                    </div>
+                                `
+                                    : ""
+                                }
+                            </div>
+                        </div>`;
+
+            // Agregar la tarjeta al grid
+            projectsGrid.appendChild(proyectoCard);
+          });
         }
 
-        function mostrarFormularioNuevo() {
-            // Limpiar el proyecto actual
-            proyectoActual = null;
-            
-            // Resetear el formulario
-            document.getElementById('formProyecto').reset();
-            document.getElementById('proyectoId').value = '';
-            
-            // Actualizar la interfaz
-            document.getElementById('modalTitle').textContent = 'Nuevo Proyecto';
-            if (imagenPreview) imagenPreview.classList.add('hidden');
-            modalProyecto.classList.remove('hidden');
-            modalProyecto.classList.add('flex');
-            document.body.style.overflow = 'hidden';
+        // Agregar el botón de agregar al final
+        if (addProjectCard) {
+          projectsGrid.appendChild(addProjectCard);
         }
+      }
 
-        async function editarProyecto(id) {
-            try {
-                showLoader('modalProyecto');
-                const response = await fetch(`${API_URL}/${id}`);
-                if (!response.ok) throw new Error('Error al cargar el proyecto');
-                
-                const proyecto = await response.json();
-                
-                // Guardar el proyecto actual para usarlo al guardar
-                proyectoActual = proyecto;
-                
-                // Llenar el formulario
-                document.getElementById('proyectoId').value = proyecto.id;
-                document.getElementById('nombre').value = proyecto.titulo || '';
-                document.getElementById('descripcion').value = proyecto.descripcion || '';
-                document.getElementById('fechaInicio').value = proyecto.fecha ? proyecto.fecha.split('T')[0] : '';
-                document.getElementById('tecnologias').value = proyecto.tecnologias || '';
-                document.getElementById('enlaceDemo').value = proyecto.enlace_demo || '';
-                document.getElementById('enlaceCodigo').value = proyecto.enlace_codigo || '';
-                document.getElementById('visible').checked = proyecto.visible === true || proyecto.visible === 1 || false;
-                
-                // Ocultar la sección de vista previa de imagen
-                if (imagenPreview) imagenPreview.classList.add('hidden');
-                
-                // Mostrar el modal
-                document.getElementById('modalTitle').textContent = 'Editar Proyecto';
-                modalProyecto.classList.remove('hidden');
-                modalProyecto.classList.add('flex');
-                document.body.style.overflow = 'hidden';
-            } catch (error) {
-                console.error('Error:', error);
-                mostrarAlerta('error', 'No se pudo cargar el proyecto');
-            } finally {
-                hideLoader('modalProyecto');
+      function mostrarFormularioNuevo() {
+        // Limpiar el proyecto actual
+        proyectoActual = null;
+
+        // Resetear el formulario
+        document.getElementById("formProyecto").reset();
+        document.getElementById("proyectoId").value = "";
+
+        // Actualizar la interfaz
+        document.getElementById("modalTitle").textContent = "Nuevo Proyecto";
+        if (imagenPreview) imagenPreview.classList.add("hidden");
+        modalProyecto.classList.remove("hidden");
+        modalProyecto.classList.add("flex");
+        document.body.style.overflow = "hidden";
+      }
+
+      async function editarProyecto(id) {
+        try {
+          showLoader("modalProyecto");
+          const response = await fetch(`${API_URL}/${id}`);
+          if (!response.ok) throw new Error("Error al cargar el proyecto");
+
+          const proyecto = await response.json();
+
+          // Guardar el proyecto actual para usarlo al guardar
+          proyectoActual = proyecto;
+
+          // Llenar el formulario
+          document.getElementById("proyectoId").value = proyecto.id;
+          document.getElementById("nombre").value = proyecto.titulo || "";
+          document.getElementById("descripcion").value =
+            proyecto.descripcion || "";
+          document.getElementById("fechaInicio").value = proyecto.fecha
+            ? proyecto.fecha.split("T")[0]
+            : "";
+          document.getElementById("tecnologias").value =
+            proyecto.tecnologias || "";
+          document.getElementById("enlaceDemo").value =
+            proyecto.enlace_demo || "";
+          document.getElementById("enlaceCodigo").value =
+            proyecto.enlace_codigo || "";
+
+          // Asegurarse de que el valor de 'visible' sea un booleano
+          const esVisible =
+            proyecto.visible === true ||
+            proyecto.visible === 1 ||
+            proyecto.visible === "1";
+          console.log(
+            "Valor de visible al cargar:",
+            proyecto.visible,
+            "convertido a:",
+            esVisible
+          );
+          document.getElementById("visible").checked = esVisible;
+
+          // Ocultar la sección de vista previa de imagen
+          if (imagenPreview) imagenPreview.classList.add("hidden");
+
+          // Mostrar el modal
+          document.getElementById("modalTitle").textContent = "Editar Proyecto";
+          modalProyecto.classList.remove("hidden");
+          modalProyecto.classList.add("flex");
+          document.body.style.overflow = "hidden";
+        } catch (error) {
+          console.error("Error:", error);
+          mostrarAlerta("error", "No se pudo cargar el proyecto");
+        } finally {
+          hideLoader("modalProyecto");
+        }
+      }
+
+      async function guardarProyecto(e) {
+        // Mostrar indicador de carga
+        showLoader("modalProyecto");
+
+        try {
+          // Obtener los valores del formulario
+          // Obtener el valor del checkbox y convertirlo a 1 o 0
+          const visibleValue = document.getElementById("visible").checked
+            ? 1
+            : 0;
+
+          const proyecto = {
+            titulo: document.getElementById("nombre").value.trim(),
+            descripcion: document.getElementById("descripcion").value.trim(),
+            fecha: document.getElementById("fechaInicio").value,
+            tecnologias: document.getElementById("tecnologias").value.trim(),
+            enlace_demo: document.getElementById("enlaceDemo").value.trim(),
+            enlace_codigo: document.getElementById("enlaceCodigo").value.trim(),
+            visible: visibleValue,
+          };
+
+          console.log(
+            "Valor del checkbox visible (antes de enviar):",
+            proyecto.visible
+          );
+
+          // Validar campos obligatorios
+          if (!proyecto.titulo || !proyecto.descripcion) {
+            throw new Error(
+              "El título y la descripción son campos obligatorios"
+            );
+          }
+
+          // Si estamos editando, agregar el ID
+          if (proyectoActual) {
+            proyecto.id = proyectoActual.id;
+          }
+
+          // Determinar la URL y método según si es nuevo o edición
+          const isEdit = !!proyectoActual;
+          const url = isEdit ? `${API_URL}/${proyectoActual.id}` : API_URL;
+          const method = isEdit ? "PUT" : "POST";
+
+          console.log("Enviando datos a:", url);
+          console.log("Método:", method);
+          console.log("Datos:", proyecto);
+
+          // Crear FormData para manejar archivos
+          const formData = new FormData();
+
+          // Agregar campos del formulario al FormData
+          Object.entries(proyecto).forEach(([key, value]) => {
+            if (value !== undefined && value !== null) {
+              // Para el campo 'visible', convertir a número (0 o 1) para la base de datos BIT
+              if (key === "visible") {
+                formData.append(key, value ? 1 : 0);
+              } else {
+                formData.append(key, value);
+              }
             }
+          });
+
+          console.log("Datos a enviar:", Object.fromEntries(formData));
+
+          // Agregar archivo si existe
+          const fileInput = document.getElementById("imagen");
+          if (fileInput.files && fileInput.files[0]) {
+            formData.append("imagen", fileInput.files[0]);
+            console.log("Archivo adjuntado:", fileInput.files[0].name);
+          }
+
+          // Enviar la solicitud
+          const response = await fetch(url, {
+            method,
+            body: formData,
+            // No establecer Content-Type, el navegador lo hará automáticamente
+          });
+
+          // Leer la respuesta
+          const responseData = await response.json();
+          console.log("Respuesta del servidor:", responseData);
+
+          if (!response.ok) {
+            console.error("Error del servidor:", responseData);
+            throw new Error(
+              responseData.error || "Error al guardar el proyecto"
+            );
+          }
+
+          mostrarAlerta(
+            "success",
+            isEdit
+              ? "Proyecto actualizado correctamente"
+              : "Proyecto creado correctamente"
+          );
+          cerrarModal();
+          cargarProyectos();
+        } catch (error) {
+          console.error("Error en guardarProyecto:", error);
+          mostrarAlerta(
+            "error",
+            error.message || "Error al guardar el proyecto"
+          );
+        } finally {
+          hideLoader("modalProyecto");
+        }
+      }
+
+      function confirmarEliminar(id) {
+        console.log("ID recibido para eliminar:", id, "Tipo:", typeof id);
+        console.log("Proyectos disponibles:", proyectos);
+
+        // Asegurarse de que el ID sea un número para la comparación
+        const idNum = Number(id);
+
+        // Encontrar el proyecto por ID, comparando como números
+        proyectoActual = proyectos.find((p) => Number(p.id) === idNum);
+
+        if (!proyectoActual) {
+          console.error(
+            "No se encontró el proyecto con ID:",
+            id,
+            "IDs disponibles:",
+            proyectos.map((p) => `${p.id} (${typeof p.id})`)
+          );
+          mostrarAlerta("error", "No se pudo encontrar el proyecto a eliminar");
+          return;
         }
 
-        async function guardarProyecto(e) {
-            // Mostrar indicador de carga
-            showLoader('modalProyecto');
-            
-            try {
-                // Obtener los valores del formulario
-                const proyecto = {
-                    titulo: document.getElementById('nombre').value.trim(),
-                    descripcion: document.getElementById('descripcion').value.trim(),
-                    fecha: document.getElementById('fechaInicio').value,
-                    tecnologias: document.getElementById('tecnologias').value.trim(),
-                    enlace_demo: document.getElementById('enlaceDemo').value.trim(),
-                    enlace_codigo: document.getElementById('enlaceCodigo').value.trim(),
-                    visible: document.getElementById('visible').checked
-                };
-                
-                console.log('Valor del checkbox visible:', document.getElementById('visible').checked);
-                
-                // Validar campos obligatorios
-                if (!proyecto.titulo || !proyecto.descripcion) {
-                    throw new Error('El título y la descripción son campos obligatorios');
-                }
-                
-                // Si estamos editando, agregar el ID
-                if (proyectoActual) {
-                    proyecto.id = proyectoActual.id;
-                }
-                
-                // Determinar la URL y método según si es nuevo o edición
-                const isEdit = !!proyectoActual;
-                const url = isEdit ? `${API_URL}/${proyectoActual.id}` : API_URL;
-                const method = isEdit ? 'PUT' : 'POST';
-                
-                console.log('Enviando datos a:', url);
-                console.log('Método:', method);
-                console.log('Datos:', proyecto);
-                
-                // Crear FormData para manejar archivos
-                const formData = new FormData();
-                
-                // Agregar campos del formulario al FormData
-                Object.entries(proyecto).forEach(([key, value]) => {
-                    if (value !== undefined && value !== null) {
-                        formData.append(key, value);
-                    }
-                });
-                
-                // Agregar archivo si existe
-                const fileInput = document.getElementById('imagen');
-                if (fileInput.files && fileInput.files[0]) {
-                    formData.append('imagen', fileInput.files[0]);
-                    console.log('Archivo adjuntado:', fileInput.files[0].name);
-                }
-                
-                // Enviar la solicitud
-                const response = await fetch(url, {
-                    method,
-                    body: formData
-                    // No establecer Content-Type, el navegador lo hará automáticamente
-                });
-                
-                // Leer la respuesta
-                const responseData = await response.json();
-                console.log('Respuesta del servidor:', responseData);
-                
-                if (!response.ok) {
-                    console.error('Error del servidor:', responseData);
-                    throw new Error(responseData.error || 'Error al guardar el proyecto');
-                }
-                
-                mostrarAlerta('success', isEdit ? 'Proyecto actualizado correctamente' : 'Proyecto creado correctamente');
-                cerrarModal();
-                cargarProyectos();
-            } catch (error) {
-                console.error('Error en guardarProyecto:', error);
-                mostrarAlerta('error', error.message || 'Error al guardar el proyecto');
-            } finally {
-                hideLoader('modalProyecto');
+        console.log("Proyecto encontrado para eliminar:", proyectoActual);
+
+        // Mostrar el modal de confirmación
+        const modalEliminar = document.getElementById("modalEliminar");
+        modalEliminar.classList.remove("hidden");
+        modalEliminar.classList.add("flex");
+        document.body.style.overflow = "hidden";
+      }
+
+      async function eliminarProyecto() {
+        if (!proyectoActual) {
+          mostrarAlerta(
+            "error",
+            "No se ha seleccionado ningún proyecto para eliminar"
+          );
+          return;
+        }
+
+        const modalEliminar = document.getElementById("modalEliminar");
+        const btnEliminar = document.getElementById("btnConfirmarEliminar");
+        const btnCancelar = document.getElementById("btnCancelarEliminar");
+
+        if (!btnEliminar || !btnCancelar) {
+          console.error(
+            "No se encontraron los botones del modal de eliminación"
+          );
+          return;
+        }
+
+        // Deshabilitar botones durante la eliminación
+        btnEliminar.disabled = true;
+        btnCancelar.disabled = true;
+        btnEliminar.innerHTML =
+          '<i class="fas fa-spinner fa-spin"></i> Eliminando...';
+
+        try {
+          const proyectoId = Number(proyectoActual.id);
+          console.log(
+            `Eliminando proyecto con ID: ${proyectoId} (tipo: ${typeof proyectoId})`
+          );
+
+          const response = await fetch(`${API_URL}/${proyectoId}`, {
+            method: "DELETE",
+            headers: {
+              "Content-Type": "application/json",
+              Accept: "application/json",
+            },
+          });
+
+          const result = await response.json();
+
+          if (!response.ok) {
+            throw new Error(result.error || "Error al eliminar el proyecto");
+          }
+
+          mostrarAlerta("success", "Proyecto eliminado correctamente");
+
+          // Ocultar el modal
+          if (modalEliminar) {
+            modalEliminar.classList.add("hidden");
+            modalEliminar.classList.remove("flex");
+          }
+
+          // Recargar la lista de proyectos
+          await cargarProyectos();
+        } catch (error) {
+          console.error("Error al eliminar el proyecto:", error);
+          mostrarAlerta(
+            "error",
+            `No se pudo eliminar el proyecto: ${error.message}`
+          );
+        } finally {
+          // Restaurar el estado de los botones
+          if (btnEliminar && btnCancelar) {
+            btnEliminar.disabled = false;
+            btnCancelar.disabled = false;
+            btnEliminar.innerHTML = "Eliminar";
+          }
+          document.body.style.overflow = "auto";
+          proyectoActual = null;
+        }
+      }
+
+      function mostrarVistaPreviaImagen(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          imagenPreviewImg.src = e.target.result;
+          imagenPreview.classList.remove("hidden");
+        };
+        reader.readAsDataURL(file);
+      }
+
+      function cerrarModal() {
+        modalProyecto.classList.add("hidden");
+        modalProyecto.classList.remove("flex");
+        document.body.style.overflow = "auto";
+
+        // Limpiar el input de archivo
+        imagenInput.value = "";
+      }
+
+      function formatearFecha(fecha) {
+        if (!fecha) return "Sin fecha";
+        const opciones = { year: "numeric", month: "short", day: "numeric" };
+        return new Date(fecha).toLocaleDateString("es-ES", opciones);
+      }
+
+      function mostrarAlerta(tipo, mensaje) {
+        // Crear el elemento de alerta si no existe
+        let alerta = document.getElementById("alerta");
+        if (!alerta) {
+          alerta = document.createElement("div");
+          alerta.id = "alerta";
+          alerta.className = `fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg ${
+            tipo === "success" ? "bg-green-500" : "bg-red-500"
+          } text-white`;
+          document.body.appendChild(alerta);
+        } else {
+          alerta.className = `fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg ${
+            tipo === "success" ? "bg-green-500" : "bg-red-500"
+          } text-white`;
+        }
+
+        alerta.textContent = mensaje;
+
+        // Ocultar la alerta después de 5 segundos
+        setTimeout(() => {
+          alerta.classList.add(
+            "opacity-0",
+            "transition-opacity",
+            "duration-500"
+          );
+          setTimeout(() => {
+            if (document.body.contains(alerta)) {
+              document.body.removeChild(alerta);
             }
-        }
+          }, 500);
+        }, 5000);
+      }
 
+      // Hacer las funciones accesibles globalmente
+      window.editarProyecto = editarProyecto;
+      window.confirmarEliminar = confirmarEliminar;
 
-        function confirmarEliminar(id) {
-            // Encontrar el proyecto por ID
-            proyectoActual = proyectos.find(p => p.id === id);
-            if (!proyectoActual) {
-                mostrarAlerta('error', 'No se pudo encontrar el proyecto a eliminar');
-                return;
-            }
-            
-            // Mostrar el modal de confirmación
-            const modalEliminar = document.getElementById('modalEliminar');
-            modalEliminar.classList.remove('hidden');
-            modalEliminar.classList.add('flex');
-            document.body.style.overflow = 'hidden';
-        }
-
-        async function eliminarProyecto() {
-            if (!proyectoActual) {
-                mostrarAlerta('error', 'No se ha seleccionado ningún proyecto para eliminar');
-                return;
-            }
-            
-            const modalEliminar = document.getElementById('modalEliminar');
-            const btnEliminar = document.getElementById('btnConfirmarEliminar');
-            const btnCancelar = document.getElementById('btnCancelarEliminar');
-            
-            if (!btnEliminar || !btnCancelar) {
-                console.error('No se encontraron los botones del modal de eliminación');
-                return;
-            }
-            
-            // Deshabilitar botones durante la eliminación
-            btnEliminar.disabled = true;
-            btnCancelar.disabled = true;
-            btnEliminar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Eliminando...';
-            
-            try {
-                console.log(`Eliminando proyecto con ID: ${proyectoActual.id}`);
-                const response = await fetch(`${API_URL}/${proyectoActual.id}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
-                });
-                
-                const result = await response.json();
-                
-                if (!response.ok) {
-                    throw new Error(result.error || 'Error al eliminar el proyecto');
-                }
-                
-                mostrarAlerta('success', 'Proyecto eliminado correctamente');
-                
-                // Ocultar el modal
-                if (modalEliminar) {
-                    modalEliminar.classList.add('hidden');
-                    modalEliminar.classList.remove('flex');
-                }
-                
-                // Recargar la lista de proyectos
-                await cargarProyectos();
-                
-            } catch (error) {
-                console.error('Error al eliminar el proyecto:', error);
-                mostrarAlerta('error', `No se pudo eliminar el proyecto: ${error.message}`);
-            } finally {
-                // Restaurar el estado de los botones
-                if (btnEliminar && btnCancelar) {
-                    btnEliminar.disabled = false;
-                    btnCancelar.disabled = false;
-                    btnEliminar.innerHTML = 'Eliminar';
-                }
-                document.body.style.overflow = 'auto';
-                proyectoActual = null;
-            }
-        }
-
-        function mostrarVistaPreviaImagen(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-            
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                imagenPreviewImg.src = e.target.result;
-                imagenPreview.classList.remove('hidden');
-            }
-            reader.readAsDataURL(file);
-        }
-
-        function cerrarModal() {
-            modalProyecto.classList.add('hidden');
-            modalProyecto.classList.remove('flex');
-            document.body.style.overflow = 'auto';
-            
-            // Limpiar el input de archivo
-            imagenInput.value = '';
-        }
-
-        function formatearFecha(fecha) {
-            if (!fecha) return 'Sin fecha';
-            const opciones = { year: 'numeric', month: 'short', day: 'numeric' };
-            return new Date(fecha).toLocaleDateString('es-ES', opciones);
-        }
-
-        function mostrarAlerta(tipo, mensaje) {
-            // Crear el elemento de alerta si no existe
-            let alerta = document.getElementById('alerta');
-            if (!alerta) {
-                alerta = document.createElement('div');
-                alerta.id = 'alerta';
-                alerta.className = `fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg ${tipo === 'success' ? 'bg-green-500' : 'bg-red-500'} text-white`;
-                document.body.appendChild(alerta);
-            } else {
-                alerta.className = `fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg ${tipo === 'success' ? 'bg-green-500' : 'bg-red-500'} text-white`;
-            }
-            
-            alerta.textContent = mensaje;
-            
-            // Ocultar la alerta después de 5 segundos
-            setTimeout(() => {
-                alerta.classList.add('opacity-0', 'transition-opacity', 'duration-500');
-                setTimeout(() => {
-                    if (document.body.contains(alerta)) {
-                        document.body.removeChild(alerta);
-                    }
-                }, 500);
-            }, 5000);
-        }
-
-        // Hacer las funciones accesibles globalmente
-        window.editarProyecto = editarProyecto;
-        window.confirmarEliminar = confirmarEliminar;
+      // Cargar los proyectos cuando la página se cargue
+      document.addEventListener("DOMContentLoaded", () => {
+        cargarProyectos();
+      });
     </script>
-</body>
+  </body>
 </html>
