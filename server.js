@@ -5,7 +5,7 @@ const path = require('path');
 const fs = require('fs');
 const { getConnection } = require('./back/config/db.config');
 const proyectosRoutes = require('./back/routes/routers.proyectos/proyectos.routers');
-const datosPersonalesRoutes = require('./back/routes/routers.datosPerosnales/datosPersonales.routes');
+const datosPersonalesRoutes = require('./back/routes/routers.datosPerosnales');
 const { errorHandler, notFoundHandler } = require('./back/middlewares/error.middleware');
 const { logger, errorLogger } = require('./back/middlewares/logger.middleware');
 
@@ -38,7 +38,21 @@ app.use(express.static(path.join(__dirname, 'src')));
 // Ruta específica para los archivos de proyectos
 app.use('/Proyectos', express.static(path.join(__dirname, 'src/Proyectos'), {
     index: 'viewP.html',
-    extensions: ['html']
+    extensions: ['html'],
+    setHeaders: (res) => {
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    }
+}));
+
+// Ruta específica para Datos Personales
+app.use('/DatosPersonales', express.static(path.join(__dirname, 'src/DatosPersonales'), {
+    index: 'viewDP.html',
+    extensions: ['html'],
+    setHeaders: (res) => {
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    }
 }));
 
 // Ruta alternativa para proyectos
@@ -46,26 +60,95 @@ app.get('/proyectos', (req, res) => {
     res.sendFile(path.join(__dirname, 'src/Proyectos/viewP.html'));
 });
 
-// Configuración de archivos estáticos
-app.use(express.static(path.join(__dirname, 'public')));
-app.use(express.static(path.join(__dirname, 'src')));
+// Ruta alternativa para datos personales
+app.get('/datos-personales', (req, res) => {
+    res.redirect('/DatosPersonales/viewDP.html');
+});
+
+// Configuración de archivos estáticos para archivos subidos
 app.use('/file', express.static(path.join(__dirname, 'file'), {
     setHeaders: (res) => {
         res.setHeader('Access-Control-Allow-Origin', '*');
         res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
-    }
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+    },
+    index: false
 }));
 
-// Montar las rutas de la API
-// Las rutas de datos personales estarán en /api/datos-personales
-app.use('/api/datos-personales', datosPersonalesRoutes);
+// Importar las rutas de archivos de datos personales
+const fileDatosPersonalesRoutes = require('./back/routes/routers.datosPerosnales/file.datosPersonales.routes');
 
-// Las rutas de proyectos estarán en /api/proyectos
+// Montar las rutas de la API
+// Rutas de archivos de datos personales
+app.use('/api/upload', fileDatosPersonalesRoutes);
+
+// Rutas de datos personales
+app.use('/api/datos-personales', require('./back/routes/routers.datosPerosnales/datosPersonales.routes'));
+
+// Rutas de proyectos
 app.use('/api/proyectos', proyectosRoutes);
 
 // Ruta de bienvenida
 app.get('/', (req, res) => {
-    res.redirect('/DatosPersonales/viewDP.html');
+    // Puedes redirigir a un dashboard o página de inicio
+    res.send(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Portafolio - Inicio</title>
+            <style>
+                body { 
+                    font-family: Arial, sans-serif; 
+                    display: flex; 
+                    justify-content: center; 
+                    align-items: center; 
+                    height: 100vh; 
+                    margin: 0; 
+                    background-color: #f5f5f5;
+                }
+                .container { 
+                    text-align: center; 
+                    padding: 2rem; 
+                    background: white; 
+                    border-radius: 8px; 
+                    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                }
+                h1 { 
+                    color: #333; 
+                    margin-bottom: 2rem;
+                }
+                .nav-links { 
+                    display: flex; 
+                    gap: 1rem; 
+                    justify-content: center;
+                }
+                .nav-link { 
+                    display: inline-block; 
+                    padding: 0.8rem 1.5rem; 
+                    background-color: #4CAF50; 
+                    color: white; 
+                    text-decoration: none; 
+                    border-radius: 4px; 
+                    transition: background-color 0.3s;
+                }
+                .nav-link:hover { 
+                    background-color: #45a049; 
+                }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <h1>Bienvenido al Portafolio</h1>
+                <div class="nav-links">
+                    <a href="/DatosPersonales/viewDP.html" class="nav-link">Datos Personales</a>
+                    <a href="/Proyectos/viewP.html" class="nav-link">Proyectos</a>
+                </div>
+            </div>
+        </body>
+        </html>
+    `);
 });
 
 // Manejador para rutas no encontradas (debe ir al final)

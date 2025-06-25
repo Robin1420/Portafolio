@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const proyectosRouter = require('./proyectos.routers');
+const fileProyectosRouter = require('./file.proyectos.routers');
 
 // Middleware para el router de API
 router.use((req, res, next) => {
@@ -10,6 +11,9 @@ router.use((req, res, next) => {
 
 // Montar las rutas de proyectos bajo /proyectos
 router.use('/proyectos', proyectosRouter);
+
+// Montar las rutas de archivos de proyectos
+router.use('/proyectos', fileProyectosRouter);
 
 // Ruta de prueba
 router.get('/test', (req, res) => {

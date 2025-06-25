@@ -144,7 +144,7 @@
     <script>
         // Variable global para mantener el registro actual
         let registroActual = null;
-        const API_URL = 'http://localhost:3001/api/datos-personales'; // URL del endpoint de datos personales
+        const API_URL = 'http://localhost:3001/api'; // URL base de la API
 
         // Inicializar el modal de Bootstrap
         let previewModal = null;
@@ -577,7 +577,7 @@
             formData.append('foto', file);
 
             try {
-                const response = await fetch('http://localhost:3001/api/upload/foto', {
+                const response = await fetch(`${API_URL}/upload/foto`, {
                     method: 'POST',
                     body: formData
                     // No establecer Content-Type, dejar que el navegador lo haga con el boundary
@@ -656,7 +656,7 @@
             formData.append('cv', file);
 
             try {
-                const response = await fetch('http://localhost:3001/api/upload/cv', {
+                const response = await fetch(`${API_URL}/upload/cv`, {
                     method: 'POST',
                     body: formData
                 });

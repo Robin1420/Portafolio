@@ -3,8 +3,11 @@ const fs = require('fs');
 
 // Función para manejar la subida de fotos
 exports.uploadFoto = (req, res) => {
+    console.log('=== INICIO uploadFoto ===');
     console.log('Solicitud de subida de foto recibida');
     console.log('Archivo recibido:', req.file);
+    console.log('Cuerpo de la solicitud:', req.body);
+    console.log('Headers de la solicitud:', req.headers);
     
     try {
         if (!req.file) {
@@ -18,6 +21,12 @@ exports.uploadFoto = (req, res) => {
 
         // Construir la URL del archivo
         const fileUrl = `/file/datos/foto/foto-personal.png?t=${Date.now()}`;
+        
+        // Asegurarse de que el directorio existe
+        const filePath = path.join(process.cwd(), 'file', 'datos', 'foto');
+        if (!fs.existsSync(filePath)) {
+            fs.mkdirSync(filePath, { recursive: true });
+        }
         
         console.log('Foto subida correctamente:', {
             originalname: req.file.originalname,
@@ -47,8 +56,11 @@ exports.uploadFoto = (req, res) => {
 
 // Función para manejar la subida de CV
 exports.uploadCV = (req, res) => {
+    console.log('=== INICIO uploadCV ===');
     console.log('Solicitud de subida de CV recibida');
     console.log('Archivo recibido:', req.file);
+    console.log('Cuerpo de la solicitud:', req.body);
+    console.log('Headers de la solicitud:', req.headers);
     
     try {
         if (!req.file) {
@@ -62,6 +74,12 @@ exports.uploadCV = (req, res) => {
 
         // Construir la URL del archivo
         const fileUrl = `/file/datos/documento/cv-personal.pdf?t=${Date.now()}`;
+        
+        // Asegurarse de que el directorio existe
+        const filePath = path.join(process.cwd(), 'file', 'datos', 'documento');
+        if (!fs.existsSync(filePath)) {
+            fs.mkdirSync(filePath, { recursive: true });
+        }
         
         console.log('CV subido correctamente:', {
             originalname: req.file.originalname,

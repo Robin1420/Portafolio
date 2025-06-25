@@ -51,7 +51,7 @@
                     <i class="fas fa-times text-2xl"></i>
                 </button>
             </div>
-            <form id="formProyecto" class="p-6">
+            <form id="formProyecto" class="p-6" enctype="multipart/form-data">
                 <input type="hidden" id="proyectoId">
                 
                 <div class="mb-6">
@@ -178,9 +178,9 @@
 
     <script>
         // Variables globales
+        const API_URL = 'http://localhost:3001/api/proyectos';
         let proyectos = [];
         let proyectoActual = null;
-        const API_URL = 'http://localhost:3001/api/proyectos';
         const IMG_BASE_URL = '../../file/proyectos/';
 
         // Elementos del DOM
@@ -197,8 +197,66 @@
         const imagenPreview = document.getElementById('imagenPreview');
         const imagenPreviewImg = document.getElementById('imagenPreviewImg');
         
-        // Event Listeners
-        document.addEventListener('DOMContentLoaded', cargarProyectos);
+        // Función para inicializar los event listeners
+        function initEventListeners() {
+            // Solo inicializar los listeners una vez
+            if (window.eventListenersInitialized) return;
+            
+            // Prevenir el envío predeterminado del formulario y manejar múltiples clics
+            const form = document.getElementById('formProyecto');
+            let isSubmitting = false;
+            
+            // Remover cualquier listener previo para evitar duplicados
+            const newForm = form.cloneNode(true);
+            form.parentNode.replaceChild(newForm, form);
+            
+            // Agregar el nuevo listener
+            newForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                // Evitar múltiples envíos
+                if (isSubmitting) {
+                    console.log('El formulario ya se está enviando...');
+                    return;
+                }
+                
+                // Deshabilitar el botón de enviar
+                const submitButton = newForm.querySelector('button[type="submit"]');
+                const originalButtonText = submitButton.innerHTML;
+                
+                try {
+                    isSubmitting = true;
+                    submitButton.disabled = true;
+                    submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+                    
+                    await guardarProyecto(e);
+                } catch (error) {
+                    console.error('Error al enviar el formulario:', error);
+                    mostrarAlerta('error', 'Error al enviar el formulario: ' + (error.message || 'Error desconocido'));
+                } finally {
+                    // Restaurar el botón
+                    if (submitButton) {
+                        submitButton.disabled = false;
+                        submitButton.innerHTML = originalButtonText;
+                    }
+                    isSubmitting = false;
+                }
+            });
+            
+            // Marcar como inicializado
+            window.eventListenersInitialized = true;
+        }
+        
+        // Inicializar los event listeners cuando el DOM esté listo
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                initEventListeners();
+                cargarProyectos();
+            });
+        } else {
+            initEventListeners();
+            cargarProyectos();
+        }
         btnNuevoProyecto.addEventListener('click', mostrarFormularioNuevo);
         btnCerrarModal.addEventListener('click', cerrarModal);
         btnCancelar.addEventListener('click', cerrarModal);
@@ -379,27 +437,32 @@
         }
 
         async function guardarProyecto(e) {
-            e.preventDefault();
-            
-            // Obtener los valores del formulario
-            const proyecto = {
-                titulo: document.getElementById('nombre').value.trim(),
-                descripcion: document.getElementById('descripcion').value.trim(),
-                fecha: document.getElementById('fechaInicio').value,
-                tecnologias: document.getElementById('tecnologias').value.trim(),
-                enlace_demo: document.getElementById('enlaceDemo').value.trim(),
-                enlace_codigo: document.getElementById('enlaceCodigo').value.trim(),
-                visible: document.getElementById('visible').checked ? 1 : 0
-            };
-            
-            // Validaciones básicas
-            if (!proyecto.titulo) {
-                mostrarAlerta('error', 'El nombre del proyecto es obligatorio');
-                return;
-            }
+            // Mostrar indicador de carga
+            showLoader('modalProyecto');
             
             try {
-                showLoader('modalProyecto');
+                // Obtener los valores del formulario
+                const proyecto = {
+                    titulo: document.getElementById('nombre').value.trim(),
+                    descripcion: document.getElementById('descripcion').value.trim(),
+                    fecha: document.getElementById('fechaInicio').value,
+                    tecnologias: document.getElementById('tecnologias').value.trim(),
+                    enlace_demo: document.getElementById('enlaceDemo').value.trim(),
+                    enlace_codigo: document.getElementById('enlaceCodigo').value.trim(),
+                    visible: document.getElementById('visible').checked
+                };
+                
+                console.log('Valor del checkbox visible:', document.getElementById('visible').checked);
+                
+                // Validar campos obligatorios
+                if (!proyecto.titulo || !proyecto.descripcion) {
+                    throw new Error('El título y la descripción son campos obligatorios');
+                }
+                
+                // Si estamos editando, agregar el ID
+                if (proyectoActual) {
+                    proyecto.id = proyectoActual.id;
+                }
                 
                 // Determinar la URL y método según si es nuevo o edición
                 const isEdit = !!proyectoActual;
@@ -410,16 +473,31 @@
                 console.log('Método:', method);
                 console.log('Datos:', proyecto);
                 
+                // Crear FormData para manejar archivos
+                const formData = new FormData();
+                
+                // Agregar campos del formulario al FormData
+                Object.entries(proyecto).forEach(([key, value]) => {
+                    if (value !== undefined && value !== null) {
+                        formData.append(key, value);
+                    }
+                });
+                
+                // Agregar archivo si existe
+                const fileInput = document.getElementById('imagen');
+                if (fileInput.files && fileInput.files[0]) {
+                    formData.append('imagen', fileInput.files[0]);
+                    console.log('Archivo adjuntado:', fileInput.files[0].name);
+                }
+                
                 // Enviar la solicitud
                 const response = await fetch(url, {
                     method,
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(proyecto)
+                    body: formData
+                    // No establecer Content-Type, el navegador lo hará automáticamente
                 });
                 
-                // Leer la respuesta una sola vez
+                // Leer la respuesta
                 const responseData = await response.json();
                 console.log('Respuesta del servidor:', responseData);
                 
@@ -428,7 +506,7 @@
                     throw new Error(responseData.error || 'Error al guardar el proyecto');
                 }
                 
-                mostrarAlerta('success', proyectoActual ? 'Proyecto actualizado correctamente' : 'Proyecto creado correctamente');
+                mostrarAlerta('success', isEdit ? 'Proyecto actualizado correctamente' : 'Proyecto creado correctamente');
                 cerrarModal();
                 cargarProyectos();
             } catch (error) {
@@ -439,31 +517,80 @@
             }
         }
 
+
         function confirmarEliminar(id) {
+            // Encontrar el proyecto por ID
             proyectoActual = proyectos.find(p => p.id === id);
+            if (!proyectoActual) {
+                mostrarAlerta('error', 'No se pudo encontrar el proyecto a eliminar');
+                return;
+            }
+            
+            // Mostrar el modal de confirmación
+            const modalEliminar = document.getElementById('modalEliminar');
             modalEliminar.classList.remove('hidden');
             modalEliminar.classList.add('flex');
             document.body.style.overflow = 'hidden';
         }
 
         async function eliminarProyecto() {
-            if (!proyectoActual) return;
+            if (!proyectoActual) {
+                mostrarAlerta('error', 'No se ha seleccionado ningún proyecto para eliminar');
+                return;
+            }
+            
+            const modalEliminar = document.getElementById('modalEliminar');
+            const btnEliminar = document.getElementById('btnConfirmarEliminar');
+            const btnCancelar = document.getElementById('btnCancelarEliminar');
+            
+            if (!btnEliminar || !btnCancelar) {
+                console.error('No se encontraron los botones del modal de eliminación');
+                return;
+            }
+            
+            // Deshabilitar botones durante la eliminación
+            btnEliminar.disabled = true;
+            btnCancelar.disabled = true;
+            btnEliminar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Eliminando...';
             
             try {
+                console.log(`Eliminando proyecto con ID: ${proyectoActual.id}`);
                 const response = await fetch(`${API_URL}/${proyectoActual.id}`, {
-                    method: 'DELETE'
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
                 });
                 
-                if (!response.ok) throw new Error('Error al eliminar el proyecto');
+                const result = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(result.error || 'Error al eliminar el proyecto');
+                }
                 
                 mostrarAlerta('success', 'Proyecto eliminado correctamente');
-                modalEliminar.classList.add('hidden');
-                cargarProyectos();
+                
+                // Ocultar el modal
+                if (modalEliminar) {
+                    modalEliminar.classList.add('hidden');
+                    modalEliminar.classList.remove('flex');
+                }
+                
+                // Recargar la lista de proyectos
+                await cargarProyectos();
+                
             } catch (error) {
-                console.error('Error:', error);
-                mostrarAlerta('error', 'No se pudo eliminar el proyecto');
+                console.error('Error al eliminar el proyecto:', error);
+                mostrarAlerta('error', `No se pudo eliminar el proyecto: ${error.message}`);
             } finally {
+                // Restaurar el estado de los botones
+                if (btnEliminar && btnCancelar) {
+                    btnEliminar.disabled = false;
+                    btnCancelar.disabled = false;
+                    btnEliminar.innerHTML = 'Eliminar';
+                }
                 document.body.style.overflow = 'auto';
+                proyectoActual = null;
             }
         }
 
