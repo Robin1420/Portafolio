@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const fileRoutes = require('./file.routes');
+const fileRoutes = require('./file.datosPersonales.routes');
 const datosPersonalesRoutes = require('./datosPersonales.routes');
 
 // Middleware para el router de API
@@ -41,4 +41,4 @@ router.use((req, res) => {
     });
 });
 
-module.exports = router;
+module.exports = router;    

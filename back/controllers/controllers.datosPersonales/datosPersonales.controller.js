@@ -1,4 +1,4 @@
-const { getConnection, sql } = require('../config/db.config');
+const { getConnection, sql } = require('../../config/db.config');
 
 // Obtener todos los registros
 exports.getAllDatosPersonales = async (req, res) => {

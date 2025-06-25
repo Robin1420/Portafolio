@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const fileController = require('../controllers/file.controller');
-const { upload, uploadCV } = require('../config/multer.config');
+const fileController = require('../controllers/controllers.proyectos/proyectos.controller');
+const { upload, uploadCV } = require('../../config/multer.proyectos/multer.config');
 
 // Ruta para subir la foto personal
 router.post('/foto', upload.single('foto'), fileController.uploadFoto);

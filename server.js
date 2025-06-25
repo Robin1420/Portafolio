@@ -4,7 +4,8 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 const { getConnection } = require('./back/config/db.config');
-const routes = require('./back/routes');
+const proyectosRoutes = require('./back/routes/routers.proyectos/proyectos.routers');
+const datosPersonalesRoutes = require('./back/routes/routers.datosPerosnales/datosPersonales.routes');
 const { errorHandler, notFoundHandler } = require('./back/middlewares/error.middleware');
 const { logger, errorLogger } = require('./back/middlewares/logger.middleware');
 
@@ -33,22 +34,19 @@ app.use(logger);
 // Configuración de archivos estáticos
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.static(path.join(__dirname, 'src')));
-app.use('/file', express.static(path.join(__dirname, 'file'), {
-    setHeaders: (res) => {
-        res.setHeader('Access-Control-Allow-Origin', '*');
-        res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
-    }
+
+// Ruta específica para los archivos de proyectos
+app.use('/Proyectos', express.static(path.join(__dirname, 'src/Proyectos'), {
+    index: 'viewP.html',
+    extensions: ['html']
 }));
 
-// Ruta de bienvenida
-app.get('/', (req, res) => {
-    res.redirect('/DatosPersonales/viewDP.html');
+// Ruta alternativa para proyectos
+app.get('/proyectos', (req, res) => {
+    res.sendFile(path.join(__dirname, 'src/Proyectos/viewP.html'));
 });
 
-// Montar las rutas de la API bajo /api
-app.use('/api', routes);
-
-// Servir archivos estáticos para la aplicación web
+// Configuración de archivos estáticos
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.static(path.join(__dirname, 'src')));
 app.use('/file', express.static(path.join(__dirname, 'file'), {
@@ -58,10 +56,22 @@ app.use('/file', express.static(path.join(__dirname, 'file'), {
     }
 }));
 
+// Montar las rutas de la API
+// Las rutas de datos personales estarán en /api/datos-personales
+app.use('/api/datos-personales', datosPersonalesRoutes);
+
+// Las rutas de proyectos estarán en /api/proyectos
+app.use('/api/proyectos', proyectosRoutes);
+
+// Ruta de bienvenida
+app.get('/', (req, res) => {
+    res.redirect('/DatosPersonales/viewDP.html');
+});
+
 // Manejador para rutas no encontradas (debe ir al final)
 app.use((req, res) => {
     console.log(`Ruta no encontrada: ${req.method} ${req.originalUrl}`);
-    res.status(404).json({ 
+    res.status(404).json({
         error: 'Ruta no encontrada',
         path: req.originalUrl,
         method: req.method

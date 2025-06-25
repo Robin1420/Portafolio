@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const datosPersonalesController = require('../controllers/datosPersonales.controller');
+const datosPersonalesController = require('../../controllers/controllers.datosPersonales/datosPersonales.controller');
 
 // Obtener todos los registros
 router.get('/', datosPersonalesController.getAllDatosPersonales);
