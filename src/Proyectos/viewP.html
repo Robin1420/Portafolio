@@ -117,6 +117,16 @@
         </div>
 
         <!-- Botón de Agregar Proyecto (se mantendrá al final) -->
+        <button
+          id="addProjectCard"
+          class="project-card flex flex-col items-center justify-center p-6 border-2 border-dashed border-green-300 rounded-lg hover:border-green-500 hover:bg-green-50 transition-colors cursor-pointer"
+          onclick="mostrarFormularioNuevo()"
+        >
+          <i class="fas fa-plus text-4xl text-green-500 mb-2"></i>
+          <span class="text-green-600 font-medium">Agregar Proyecto</span>
+        </button>
+
+        <!-- Botón de Agregar Proyecto (se mantendrá al final) -->
         <div
           id="addProjectCard"
           class="bg-white rounded-lg shadow-md overflow-hidden border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:border-blue-400 transition-colors duration-200 min-h-[300px]"
@@ -147,12 +157,15 @@
       <div
         class="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
       >
-        <div class="flex justify-between items-center border-b p-4">
-          <h3 class="text-xl font-semibold text-gray-800" id="modalTitle">
+        <div class="flex justify-between items-center p-4 bg-blue-600 text-white rounded-t-lg" id="modalHeader">
+          <h3 class="text-xl font-semibold" id="modalTitle">
             Nuevo Proyecto
           </h3>
-          <button id="btnCerrarModal" class="text-gray-500 hover:text-gray-700">
-            <i class="fas fa-times text-2xl"></i>
+          <button
+            onclick="cerrarModal()"
+            class="text-white hover:text-gray-200"
+          >
+            <i class="fas fa-times text-xl"></i>
           </button>
         </div>
         <form id="formProyecto" class="p-6" enctype="multipart/form-data">
@@ -329,10 +342,21 @@
       class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4"
     >
       <div class="bg-white rounded-lg shadow-xl w-full max-w-md">
+        <div class="flex justify-between items-center p-4 bg-red-600 text-white rounded-t-lg">
+          <h3 class="text-xl font-semibold">
+            Confirmar Eliminación
+          </h3>
+          <button
+            onclick="document.getElementById('modalEliminar').classList.add('hidden')"
+            class="text-white hover:text-gray-200"
+          >
+            <i class="fas fa-times text-xl"></i>
+          </button>
+        </div>
         <div class="p-6">
           <div class="text-center">
             <div
-              class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100"
+              class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mt-2"
             >
               <i class="fas fa-exclamation text-red-600 text-xl"></i>
             </div>
@@ -638,8 +662,9 @@
               proyecto.imagen || "default-project.jpg"
             }" 
                                  alt="${proyecto.titulo}" 
-                                 class="w-full h-48 object-cover"
+                                 class="w-full h-48 object-cover rounded-t-lg"
                                  onerror="this.onerror=null; this.src='https://via.placeholder.com/400x200?text=Imagen+no+disponible'"
+                                 style="border-top-left-radius: 0.5rem; border-top-right-radius: 0.5rem;"
                             >
                             <div class="absolute top-2 right-2 flex space-x-1">
                                 <button onclick="editarProyecto('${proyecto.id}')" 
@@ -738,6 +763,12 @@
 
         // Actualizar la interfaz
         document.getElementById("modalTitle").textContent = "Nuevo Proyecto";
+        // Cambiar el color del encabezado a verde para nuevo proyecto
+        const modalHeader = document.getElementById("modalHeader");
+        if (modalHeader) {
+          modalHeader.classList.remove("bg-blue-600");
+          modalHeader.classList.add("bg-green-600");
+        }
         if (imagenPreview) imagenPreview.classList.add("hidden");
         modalProyecto.classList.remove("hidden");
         modalProyecto.classList.add("flex");
