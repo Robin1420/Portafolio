@@ -32,6 +32,7 @@ const corsOptions = {
 // Middleware básico
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
+app.use(express.json()); // Para parsear application/json
 app.use(express.urlencoded({ extended: true }));
 
 // Middleware de logging
@@ -93,11 +94,40 @@ app.use('/api/upload', fileDatosPersonalesRoutes);
 // Rutas de datos personales
 app.use('/api/datos-personales', require('./back/routes/routers.datosPerosnales/datosPersonales.routes'));
 
+// Middleware para registrar las peticiones a la API
+app.use('/api', (req, res, next) => {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
+    console.log('Headers:', req.headers);
+    console.log('Body:', req.body);
+    next();
+});
+
 // Rutas de proyectos
 app.use('/api/proyectos', proyectosRoutes);
 
 // Rutas de skills
+console.log('Registrando rutas de skills...');
 app.use('/api/skills', skillsRoutes);
+
+// Agregar un manejador de ruta para verificar que las rutas estén registradas
+app._router.stack.forEach((layer) => {
+  if (layer.route) {
+    const methods = Object.keys(layer.route.methods).join(',').toUpperCase();
+    console.log(`${methods.padEnd(7)} ${layer.route.path}`);
+  } else if (layer.name === 'router') {
+    // Para rutas montadas con app.use()
+    if (layer.regexp.toString().includes('skills')) {
+      console.log('Rutas de skills registradas:');
+      layer.handle.stack.forEach(handler => {
+        const route = handler.route;
+        if (route) {
+          const methods = Object.keys(route.methods).join(',').toUpperCase();
+          console.log(`  ${methods.padEnd(7)} /api/skills${route.path}`);
+        }
+      });
+    }
+  }
+});
 
 // Ruta para servir la vista de skills
 app.get('/Skills/viewS.html', (req, res) => {

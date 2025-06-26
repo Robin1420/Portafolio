@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mis Habilidades</title>
+    <title>Skills</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Font Awesome -->
@@ -28,7 +28,7 @@
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
         }
 
-        /* Tarjetas de habilidades */
+        /* Tarjetas de Skills */
         .skill-card {
             background: white;
             border-radius: 0.75rem;
@@ -113,6 +113,11 @@
         /* Estilo para cada sección de categoría */
         .category-section {
             width: 100%;
+            padding: 1rem 0;
+        }
+        
+        .category-section:not(:hover) .skill-card {
+            pointer-events: none;
         }
 
         /* Encabezado de categoría */
@@ -130,8 +135,9 @@
             overflow-x: auto;
             padding: 1rem 0 2rem;
             margin: 0 -2rem;
-            padding-left: 2rem;
+            padding-left: 7rem;  /* Aumentado de 2rem a 4rem */
             padding-right: 2rem;
+            transition: all 0.3s ease;
         }
 
         /* Estilo de la barra de desplazamiento */
@@ -152,42 +158,63 @@
         /* Fila de tarjetas */
         .skills-row {
             display: inline-flex;
-            gap: 1.25rem;
+            gap: 0;
             padding-right: 2rem;
             min-width: 100%;
             box-sizing: border-box;
+            transition: gap 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
         }
 
         /* Estilo de tarjeta individual */
         .skill-card {
             flex: 0 0 auto;
-            width: 80px;
-            height: 80px;
+            width: 150px;  /* Aumentado de 60px a 80px */
+            height: 150px;  /* Aumentado de 60px a 80px */
             background: white;
             border-radius: 8px;
-            padding: 0.5rem;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-            transition: all 0.2s ease;
+            padding: 0.75rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             border: 1px solid #e5e7eb;
+            position: relative;
+            margin-left: -80px;
+            z-index: 1;
         }
         
-        .skill-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        /* Estado inicial de las tarjetas */
+        .skill-card {
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Al hacer hover en la sección de categoría */
+        .category-section:hover .skills-row {
+            gap: 1rem;
+        }
+        
+        /* Al hacer hover en la sección de categoría, aplicar a las tarjetas */
+        .category-section:hover .skill-card {
+            transform: translateX(0);
+            margin-left: 0;
+            margin-right: 5px;
+        }
+        
+        /* Efecto hover individual en cada tarjeta */
+        .category-section:hover .skill-card:hover {
+            transform: translateY(-5px) !important;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.15) !important;
+            z-index: 10;
+            margin: 0 5px !important;
         }
         
         @media (min-width: 768px) {
             .skill-card {
-                width: 90px;
-                height: 90px;
-            }
-            
-            .skills-row {
-                gap: 1rem;
+                width: 90px;  /* Aumentado de 65px a 90px */
+                height: 90px;  /* Aumentado de 65px a 90px */
             }
         }
         
@@ -340,116 +367,363 @@
     </style>
 </head>
 <body class="bg-gray-50">
-    <div class="w-full px-0 py-8">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Modal para agregar Skill -->
+        <div id="addSkillModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div class="bg-white rounded-lg p-6 w-full max-w-md">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-semibold text-gray-800">Agregar Nueva Skill</h3>
+                    <button onclick="document.getElementById('addSkillModal').classList.add('hidden')" 
+                            class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+                
+                <form id="addSkillForm" class="space-y-4">
+                    <div>
+                        <label for="skillName" class="block text-sm font-medium text-gray-700 mb-1">Nombre de la Skill</label>
+                        <input type="text" id="skillName" name="nombre" required
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    
+                    <div>
+                        <label for="skillCategory" class="block text-sm font-medium text-gray-700 mb-1">Categoría</label>
+                        <select id="skillCategory" name="categoria" required
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">Selecciona una categoría</option>
+                            <option value="frontend">Frontend</option>
+                            <option value="backend">Backend</option>
+                            <option value="database">Database</option>
+                            <option value="herramientas">Herramientas</option>
+                        </select>
+                    </div>
+                    
+                    <div class="flex justify-end gap-3 pt-2">
+                        <button type="button" 
+                                onclick="document.getElementById('addSkillModal').classList.add('hidden')"
+                                class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200">
+                            Cancelar
+                        </button>
+                        <button type="submit" 
+                                class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700">
+                            Guardar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
         <!-- Header -->
-        <div class="mb-10 text-center px-6">
-            <h1 class="text-4xl font-bold text-gray-800 mb-3">Mis Habilidades</h1>
-            <p class="text-lg text-gray-600 max-w-2xl mx-auto">Explora mis habilidades y conocimientos técnicos organizados por categorías</p>
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-800 mb-6">
+                Gestión de Skills
+            </h1>
+            <div class="w-full">
+                <div class="px-16" style="margin-left: 16px;padding-left: 0px;">
+                    <button 
+                        onclick="document.getElementById('addSkillModal').classList.remove('hidden')" 
+                        class="ml-0 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg flex items-center gap-2 transition-colors"
+                    >
+                        <i class="fas fa-plus"></i>
+                        Agregar Skill
+                    </button>
+                </div>
+            </div>
         </div>
 
         <!-- Skills Grid -->
-        <div id="skillsGrid" class="categories-container">
-            <!-- Las habilidades se cargarán aquí dinámicamente -->
+        <div id="skillsGrid" class="categories-container" style="
+        padding-left: 0px;">
+            <!-- Las Skills se cargarán aquí dinámicamente -->
             <div class="text-center py-10">
                 <i class="fas fa-spinner fa-spin text-4xl text-gray-400 mb-2"></i>
-                <p class="text-gray-500">Cargando habilidades...</p>
+                <p class="text-gray-500">Cargando Skills...</p>
             </div>
+
+            <!-- Las skills se cargarán aquí dinámicamente -->
         </div>
     </div>
 
     <script>
-        // Usar URL relativa para que funcione independientemente del puerto
-        const API_URL = '/api/skills';
+        // URL de la API - Asegúrate de que el puerto coincida con el del servidor (3001)
+        const API_URL = 'http://localhost:3001/api/skills';
+        
+        // Elementos del DOM
+        const addSkillForm = document.getElementById('addSkillForm');
+        const addSkillModal = document.getElementById('addSkillModal');
+        
+        // Función para mostrar alertas
+        function mostrarAlerta(tipo, mensaje) {
+            // Crear el elemento de alerta si no existe
+            let alerta = document.getElementById("alerta");
+            if (!alerta) {
+                alerta = document.createElement("div");
+                alerta.id = "alerta";
+                alerta.className = `fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg ${
+                    tipo === "success" ? "bg-green-500" : "bg-red-500"
+                } text-white transition-opacity duration-500`;
+                document.body.appendChild(alerta);
+            } else {
+                alerta.className = `fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg ${
+                    tipo === "success" ? "bg-green-500" : "bg-red-500"
+                } text-white transition-opacity duration-500`;
+            }
+
+            alerta.textContent = mensaje;
+            alerta.style.opacity = '1';
+
+            // Ocultar la alerta después de 5 segundos
+            setTimeout(() => {
+                alerta.style.opacity = '0';
+                setTimeout(() => {
+                    if (document.body.contains(alerta)) {
+                        document.body.removeChild(alerta);
+                    }
+                }, 500);
+            }, 5000);
+        }
+
+        // Escuchar el envío del formulario
+        if (addSkillForm) {
+            addSkillForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                const formData = new FormData(addSkillForm);
+                const skillData = {
+                    nombre: formData.get('nombre'),
+                    categoria: formData.get('categoria')
+                };
+                
+                try {
+                    const response = await fetch(API_URL, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(skillData)
+                    });
+                    
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error || 'Error al agregar la Skill');
+                    }
+                    
+                    // Cerrar el modal y recargar las Skills
+                    addSkillModal.classList.add('hidden');
+                    addSkillForm.reset();
+                    await cargarSkills();
+                    
+                    // Mostrar mensaje de éxito
+                    mostrarAlerta('success', 'Skill agregada correctamente');
+                } catch (error) {
+                    console.error('Error:', error);
+                    mostrarAlerta('error', error.message || 'Error al agregar la Skill');
+                }
+            });
+        }
+        
+        // Cerrar el modal al hacer clic fuera del contenido
+        window.addEventListener('click', (e) => {
+            if (e.target === addSkillModal) {
+                addSkillModal.classList.add('hidden');
+            }
+        });
+        
         let skills = [];
         let categories = new Set();
 
-        // Cargar habilidades al iniciar la página
+        // Cargar Skills al iniciar
         document.addEventListener('DOMContentLoaded', async () => {
             try {
-                await cargarHabilidades();
+                await cargarSkills();
+                // Configurar el evento de clic para el botón de confirmar eliminación
+                const btnConfirmar = document.getElementById('btnConfirmarEliminar');
+                if (btnConfirmar) {
+                    btnConfirmar.addEventListener('click', eliminarSkill);
+                }
             } catch (error) {
-                console.error('Error al cargar las habilidades:', error);
-                mostrarError('No se pudieron cargar las habilidades. Por favor, inténtalo de nuevo más tarde.');
+                console.error('Error al cargar las Skills:', error);
+                mostrarError('No se pudieron cargar las Skills. Por favor, inténtalo de nuevo más tarde.');
             }
         });
 
-        // Función para cargar las habilidades desde la API
-        async function cargarHabilidades() {
+        // Función para cargar las Skills desde la API
+        async function cargarSkills() {
             try {
-                console.log('Iniciando carga de habilidades desde:', API_URL);
+                console.log('Iniciando carga de Skills desde:', API_URL);
                 const response = await fetch(API_URL);
                 
                 if (!response.ok) {
                     const errorText = await response.text();
                     console.error('Error en la respuesta:', response.status, errorText);
-                    throw new Error(`Error al cargar las habilidades: ${response.status} ${response.statusText}`);
+                    throw new Error(`Error al cargar las Skills: ${response.status} ${response.statusText}`);
                 }
                 
                 skills = await response.json();
-                console.log('Habilidades cargadas:', skills);
+                console.log('Skills cargadas:', skills);
                 
                 if (!Array.isArray(skills)) {
                     console.error('La respuesta no es un array:', skills);
                     throw new Error('Formato de respuesta inválido');
                 }
                 
-                // Mostrar las habilidades
-                mostrarHabilidades();
+                // Mostrar las Skills
+                mostrarSkills();
             } catch (error) {
-                console.error('Error al cargar habilidades:', error);
-                mostrarError(error.message || 'Error al cargar las habilidades');
+                console.error('Error al cargar Skills:', error);
+                mostrarError(error.message || 'Error al cargar las Skills');
             }
         }
 
-        // Función para mostrar las habilidades en la interfaz
-        function mostrarHabilidades() {
+        // Variable para almacenar el ID de la skill a eliminar
+        let skillAEliminar = null;
+
+        // Función para mostrar el modal de confirmación de eliminación
+        function confirmarEliminar(id) {
+            skillAEliminar = id;
+            const modal = document.getElementById('modalEliminarSkill');
+            if (modal) {
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            }
+        }
+
+        // Función para cerrar el modal de eliminación
+        function cerrarModalEliminar() {
+            const modal = document.getElementById('modalEliminarSkill');
+            if (modal) {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+                skillAEliminar = null;
+            }
+        }
+
+        // Función para eliminar una skill
+        async function eliminarSkill() {
+            if (!skillAEliminar) {
+                console.error('No se proporcionó un ID de skill para eliminar');
+                return;
+            }
+            
+            try {
+                const url = `${API_URL}/${skillAEliminar}`;
+                console.log('URL de eliminación:', url);
+                
+                const response = await fetch(url, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                console.log('Respuesta del servidor:', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    ok: response.ok
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    console.error('Error en la respuesta:', errorData);
+                    throw new Error(errorData.error || 'Error al eliminar la skill');
+                }
+
+                // Cerrar el modal
+                cerrarModalEliminar();
+                
+                // Actualizar la lista de skills
+                await cargarSkills();
+                mostrarAlerta('success', 'Skill eliminada correctamente');
+            } catch (error) {
+                console.error('Error al eliminar la skill:', error);
+                mostrarAlerta('error', error.message || 'No se pudo eliminar la skill');
+            }
+        }
+
+        // Configurar el evento de clic para el botón de confirmar eliminación
+        document.addEventListener('DOMContentLoaded', () => {
+            const btnConfirmar = document.getElementById('btnConfirmarEliminar');
+            if (btnConfirmar) {
+                btnConfirmar.addEventListener('click', eliminarSkill);
+            }
+            
+            // Cerrar modal al hacer clic en cancelar o fuera del modal
+            const modal = document.getElementById('modalEliminarSkill');
+            const btnCancelar = document.getElementById('btnCancelarEliminar');
+            
+            if (modal) {
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) {
+                        cerrarModalEliminar();
+                    }
+                });
+            }
+            
+            if (btnCancelar) {
+                btnCancelar.addEventListener('click', cerrarModalEliminar);
+            }
+        });
+        
+        // Función para mostrar las Skills en la interfaz
+        function mostrarSkills() {
             const skillsGrid = document.getElementById('skillsGrid');
             
             if (!skills || skills.length === 0) {
                 skillsGrid.innerHTML = `
                     <div class="col-span-full text-center py-10">
                         <i class="fas fa-folder-open text-4xl text-gray-400 mb-2"></i>
-                        <p class="text-gray-500">No se encontraron habilidades</p>
+                        <p class="text-gray-500">No se encontraron Skills</p>
                     </div>
                 `;
                 return;
             }
             
-            // Agrupar habilidades por categoría (en minúsculas para consistencia)
-            const habilidadesPorCategoria = {};
+            // Agrupar Skills por categoría (en minúsculas para consistencia)
+            const SkillsPorCategoria = {};
             skills.forEach(skill => {
                 const categoria = skill.categoria.toLowerCase();
-                if (!habilidadesPorCategoria[categoria]) {
-                    habilidadesPorCategoria[categoria] = [];
+                if (!SkillsPorCategoria[categoria]) {
+                    SkillsPorCategoria[categoria] = [];
                 }
-                habilidadesPorCategoria[categoria].push(skill);
+                SkillsPorCategoria[categoria].push(skill);
             });
 
-            // Ordenar habilidades dentro de cada categoría
-            Object.keys(habilidadesPorCategoria).forEach(categoria => {
-                habilidadesPorCategoria[categoria].sort((a, b) => 
+            // Ordenar Skills dentro de cada categoría
+            Object.keys(SkillsPorCategoria).forEach(categoria => {
+                SkillsPorCategoria[categoria].sort((a, b) => 
                     a.nombre.localeCompare(b.nombre, 'es', {sensitivity: 'base'})
                 );
             });
 
-            // Orden de categorías deseado
-            const ordenCategorias = [
+            // Orden de categorías deseado (solo para ordenar las categorías conocidas)
+            const categoriasConocidas = [
                 'frontend', 
                 'backend', 
                 'database', 
                 'devops', 
-                'mobile', 
-                'control de versiones',
-                'other'
+                'mobile',
+                'herramientas',
+                'control de versiones'
             ];
 
-            // Generar HTML para cada categoría en el orden definido
+            // Obtener todas las categorías únicas de la base de datos
+            const todasLasCategorias = Object.keys(SkillsPorCategoria);
+            
+            // Ordenar categorías: primero las conocidas en el orden definido, luego el resto alfabéticamente
+            const categoriasOrdenadas = [
+                ...categoriasConocidas.filter(cat => todasLasCategorias.includes(cat)),
+                ...todasLasCategorias
+                    .filter(cat => !categoriasConocidas.includes(cat))
+                    .sort((a, b) => a.localeCompare(b, 'es', {sensitivity: 'base'}))
+            ];
+
+            // Generar HTML para cada categoría
             let html = '<div class="categories-container">';
             
-            // Primero las categorías en el orden definido
-            ordenCategorias.forEach(categoria => {
-                const habilidades = habilidadesPorCategoria[categoria];
-                if (!habilidades || habilidades.length === 0) return;
+            // Mostrar las categorías ordenadas
+            categoriasOrdenadas.forEach(categoria => {
+                const Skills = SkillsPorCategoria[categoria];
+                if (!Skills || Skills.length === 0) return;
 
                 const categoryColor = getCategoryTextColorClass(categoria);
                 html += `
@@ -464,15 +738,24 @@
                             <div class="skills-row">
                 `;
                 
-                // Agregar habilidades de esta categoría
-                habilidades.forEach(skill => {
+                // Agregar Skills de esta categoría
+                Skills.forEach(skill => {
                     html += `
-                        <div class="skill-card" style="border-top: 4px solid ${getCategoryColorValue(categoria)};">
+                        <div class="skill-card relative group" style="border-top: 4px solid ${getCategoryColorValue(categoria)};">
+                            <button onclick="event.stopPropagation(); confirmarEliminar(${skill.id})" 
+                                    class="absolute top-1 right-1 bg-red-100 text-red-600 p-1.5 rounded-full hover:bg-red-200 transition-all duration-200 opacity-0 group-hover:opacity-100 scale-90 group-hover:scale-100">
+                                <i class="fas fa-trash text-xs"></i>
+                            </button>
                             <div class="flex flex-col items-center justify-center h-full w-full">
-                                <div class="w-8 h-8 rounded-full bg-opacity-10 ${getCategoryTextColorClass(categoria).replace('text-', 'bg-')} flex items-center justify-center mb-1">
-                                    <i class="${getSkillIcon(skill.nombre, categoria)} text-base ${getCategoryTextColorClass(categoria)}"></i>
+                                <div class="w-10 h-10 rounded-full bg-opacity-10 ${getCategoryTextColorClass(categoria).replace('text-', 'bg-')} flex items-center justify-center mb-1 transition-all duration-300">
+                                    <i class="${getCategoryHeaderIcon(categoria)} text-xl ${getCategoryTextColorClass(categoria)}"></i>
                                 </div>
-                                <h3 class="text-center font-medium text-gray-800 text-xs truncate w-full">${skill.nombre}</h3>
+                                <h3 class="text-center font-medium text-gray-800 text-xxs truncate w-full">${skill.nombre}</h3>
+                                <style>
+                                    .skill-card:hover h3 {
+                                        opacity: 1;
+                                    }
+                                </style>
                             </div>
                         </div>
                     `;
@@ -513,122 +796,36 @@
         // Función para obtener el color del ícono según la categoría
         function getCategoryTextColorClass(category) {
             const colors = {
-                'frontend': 'text-blue-500',
-                'backend': 'text-green-500',
-                'database': 'text-purple-500',
-                'devops': 'text-yellow-500',
-                'mobile': 'text-red-500',
-                'other': 'text-gray-500',
-                'control de versiones': 'text-gray-700'
+                'frontend': 'text-blue-600',
+                'backend': 'text-green-600',
+                'database': 'text-purple-600',
+                'devops': 'text-yellow-600',
+                'mobile': 'text-red-600',
+                'herramientas': 'text-pink-600',
+                'control de versiones': 'text-orange-600',
+                'other': 'text-gray-600'
             };
-            return colors[category.toLowerCase()] || colors['other'];
+            // Convertir a minúsculas y eliminar espacios adicionales
+            const cat = category ? category.toLowerCase().trim() : 'other';
+            return colors[cat] || colors['other'];
         }
         
-        // Función para obtener el ícono según la habilidad
-        function getSkillIcon(skillName, category) {
-            const lowerSkill = skillName.toLowerCase();
-            const categoryLower = category.toLowerCase();
-            
-            // Mapeo de íconos por categoría
-            const categoryIcons = {
-                'frontend': {
-                    'react': 'react',
-                    'javascript': 'js',
-                    'html': 'html5',
-                    'css': 'css3-alt',
-                    'bootstrap': 'bootstrap',
-                    'sass': 'sass',
-                    'tailwind': 'tailwind',
-                    'angular': 'angular',
-                    'vue': 'vuejs',
-                    'typescript': 'typescript'
-                },
-                'backend': {
-                    'node': 'node-js',
-                    'python': 'python',
-                    'django': 'python',
-                    'java': 'java',
-                    'spring': 'leaf',
-                    'php': 'php',
-                    'ruby': 'gem',
-                    'net': 'microsoft',
-                    'express': 'server'
-                },
-                'database': {
-                    'sql': 'database',
-                    'mysql': 'database',
-                    'postgresql': 'database',
-                    'mongodb': 'database',
-                    'oracle': 'database',
-                    'redis': 'database',
-                    'firebase': 'fire',
-                    'dynamodb': 'database'
-                },
-                'devops': {
-                    'docker': 'docker',
-                    'kubernetes': 'docker',
-                    'aws': 'aws',
-                    'azure': 'microsoft',
-                    'gcp': 'google',
-                    'git': 'code-branch',
-                    'jenkins': 'jenkins',
-                    'ansible': 'server',
-                    'terraform': 'cloud'
-                },
-                'mobile': {
-                    'flutter': 'mobile-screen',
-                    'react native': 'mobile-screen',
-                    'swift': 'apple',
-                    'kotlin': 'android',
-                    'xamarin': 'mobile-screen',
-                    'ionic': 'mobile-screen'
-                },
-                'control de versiones': {
-                    'git': 'code-branch',
-                    'github': 'github',
-                    'gitlab': 'gitlab',
-                    'bitbucket': 'bitbucket',
-                    'svn': 'code-branch'
-                }
-            };
-            
-            // Buscar ícono específico para la habilidad
-            for (const [key, icon] of Object.entries(categoryIcons[categoryLower] || {})) {
-                if (lowerSkill.includes(key)) {
-                    return `fa-brands fa-${icon}`;
-                }
-            }
-            
-            // Íconos por defecto según categoría
-            const defaultIcons = {
-                'frontend': 'laptop-code',
-                'backend': 'server',
-                'database': 'database',
-                'devops': 'network-wired',
-                'mobile': 'mobile-screen',
-                'control de versiones': 'code-branch',
-                'other': 'code'
-            };
-            
-            const defaultIcon = defaultIcons[categoryLower] || 'code';
-            return `fa-solid fa-${defaultIcon}`;
-        }
-        
-        // Función para obtener el ícono del encabezado de categoría
         
         // Función para obtener el ícono del encabezado de categoría
         function getCategoryHeaderIcon(category) {
             const icons = {
-                'frontend': 'fa-laptop-code',
-                'backend': 'fa-server',
-                'database': 'fa-database',
-                'devops': 'fa-network-wired',
-                'mobile': 'fa-mobile-screen',
-                'control de versiones': 'fa-code-branch',
-                'other': 'fa-code'
+                'frontend': 'fas fa-laptop-code',
+                'backend': 'fas fa-server',
+                'database': 'fas fa-database',
+                'devops': 'fas fa-cloud',
+                'mobile': 'fas fa-mobile-alt',
+                'herramientas': 'fas fa-tools',
+                'control de versiones': 'fas fa-code-branch',
+                'other': 'fas fa-code'
             };
-            const icon = icons[category.toLowerCase()] || icons['other'];
-            return `fa-solid ${icon}`;
+            // Convertir a minúsculas y eliminar espacios adicionales
+            const cat = category ? category.toLowerCase().trim() : 'other';
+            return icons[cat] || icons['other'];
         }
         
         // Función para obtener el valor de color de la categoría
@@ -639,10 +836,13 @@
                 'database': '#8b5cf6',    // violeta-500
                 'devops': '#f59e0b',      // amarillo-500
                 'mobile': '#ef4444',      // rojo-500
+                'herramientas': '#ec4899', // rosa-500
                 'control de versiones': '#6b7280', // gris-500
                 'other': '#9ca3af'        // gris-400
             };
-            return colors[category.toLowerCase()] || colors['other'];
+            // Convertir a minúsculas y eliminar espacios adicionales
+            const cat = category ? category.toLowerCase().trim() : 'other';
+            return colors[cat] || colors['other'];
         }
         
         // Función para mostrar mensajes de error
@@ -664,5 +864,58 @@
             `;
         }
     </script>
+    <!-- Modal Eliminar Skill -->
+    <div
+      id="modalEliminarSkill"
+      class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4"
+    >
+      <div class="bg-white rounded-lg shadow-xl w-full max-w-md">
+        <div class="flex justify-between items-center p-4 bg-red-600 text-white rounded-t-lg">
+          <h3 class="text-xl font-semibold">
+            Confirmar Eliminación
+          </h3>
+          <button
+            onclick="cerrarModalEliminar()"
+            class="text-white hover:text-gray-200"
+          >
+            <i class="fas fa-times text-xl"></i>
+          </button>
+        </div>
+        <div class="p-6">
+          <div class="text-center">
+            <div
+              class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mt-2"
+            >
+              <i class="fas fa-exclamation text-red-600 text-xl"></i>
+            </div>
+            <h3 class="mt-3 text-lg font-medium text-gray-900">
+              ¿Eliminar skill?
+            </h3>
+            <div class="mt-2">
+              <p class="text-sm text-gray-500">
+                ¿Estás seguro de que deseas eliminar esta skill? Esta acción
+                no se puede deshacer.
+              </p>
+            </div>
+          </div>
+          <div class="mt-5 flex justify-end space-x-3">
+            <button
+              type="button"
+              id="btnCancelarEliminar"
+              class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              id="btnConfirmarEliminar"
+              class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+            >
+              Eliminar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
 </body>
 </html>
