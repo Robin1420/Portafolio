@@ -38,22 +38,12 @@
             border: 1px solid rgba(0, 0, 0, 0.05);
             position: relative;
             overflow: hidden;
-            height: 100%;
+            aspect-ratio: 1/1; /* Hace que las tarjetas sean cuadradas */
             display: flex;
             flex-direction: column;
             align-items: center;
+            justify-content: center;
             text-align: center;
-        }
-        
-        .skill-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 4px;
-            background: var(--primary-color);
-            transition: all 0.3s ease;
         }
         
         .skill-card:hover::before {
@@ -111,11 +101,115 @@
             margin-top: 0.5rem;
         }
 
-        /* Grid responsive */
-        .skills-grid {
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 1.5rem;
+        /* Contenedor principal de categorías */
+        .categories-container {
+            display: flex;
+            flex-direction: column;
+            gap: 3rem;
+            width: 100%;
+            padding: 0 2rem;
         }
+
+        /* Estilo para cada sección de categoría */
+        .category-section {
+            width: 100%;
+        }
+
+        /* Encabezado de categoría */
+        .category-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        /* Contenedor de tarjetas con scroll horizontal */
+        .skills-scroll-container {
+            width: 100%;
+            overflow-x: auto;
+            padding: 1rem 0 2rem;
+            margin: 0 -2rem;
+            padding-left: 2rem;
+            padding-right: 2rem;
+        }
+
+        /* Estilo de la barra de desplazamiento */
+        .skills-scroll-container::-webkit-scrollbar {
+            height: 6px;
+        }
+        
+        .skills-scroll-container::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 3px;
+        }
+        
+        .skills-scroll-container::-webkit-scrollbar-thumb {
+            background-color: #cbd5e1;
+            border-radius: 3px;
+        }
+
+        /* Fila de tarjetas */
+        .skills-row {
+            display: inline-flex;
+            gap: 1.25rem;
+            padding-right: 2rem;
+            min-width: 100%;
+            box-sizing: border-box;
+        }
+
+        /* Estilo de tarjeta individual */
+        .skill-card {
+            flex: 0 0 auto;
+            width: 80px;
+            height: 80px;
+            background: white;
+            border-radius: 8px;
+            padding: 0.5rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            transition: all 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #e5e7eb;
+        }
+        
+        .skill-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        @media (min-width: 768px) {
+            .skill-card {
+                width: 90px;
+                height: 90px;
+            }
+            
+            .skills-row {
+                gap: 1rem;
+            }
+        }
+        
+        @media (min-width: 1024px) {
+            .skill-card {
+                width: 120px;
+                height: 120px;
+            }
+            
+            .skills-row {
+                gap: 1.5rem;
+            }
+        }
+        
+        @media (min-width: 768px) {
+            .skills-grid {
+                grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+                gap: 1rem;
+            }
+        }
+        
+        
 
         /* Animación de entrada */
         @keyframes fadeInUp {
@@ -246,16 +340,16 @@
     </style>
 </head>
 <body class="bg-gray-50">
-    <div class="container mx-auto px-4 py-8">
+    <div class="w-full px-0 py-8">
         <!-- Header -->
-        <div class="mb-8 text-center">
-            <h1 class="text-3xl font-bold text-gray-800 mb-2">Mis Habilidades</h1>
-            <p class="text-gray-600">Conocimientos y habilidades técnicas</p>
+        <div class="mb-10 text-center px-6">
+            <h1 class="text-4xl font-bold text-gray-800 mb-3">Mis Habilidades</h1>
+            <p class="text-lg text-gray-600 max-w-2xl mx-auto">Explora mis habilidades y conocimientos técnicos organizados por categorías</p>
         </div>
 
         <!-- Skills Grid -->
-        <div id="skillsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            <!-- Skills will be loaded here dynamically -->
+        <div id="skillsGrid" class="categories-container">
+            <!-- Las habilidades se cargarán aquí dinámicamente -->
             <div class="text-center py-10">
                 <i class="fas fa-spinner fa-spin text-4xl text-gray-400 mb-2"></i>
                 <p class="text-gray-500">Cargando habilidades...</p>
@@ -282,21 +376,28 @@
         // Función para cargar las habilidades desde la API
         async function cargarHabilidades() {
             try {
+                console.log('Iniciando carga de habilidades desde:', API_URL);
                 const response = await fetch(API_URL);
+                
                 if (!response.ok) {
-                    throw new Error('Error al cargar las habilidades');
+                    const errorText = await response.text();
+                    console.error('Error en la respuesta:', response.status, errorText);
+                    throw new Error(`Error al cargar las habilidades: ${response.status} ${response.statusText}`);
                 }
                 
                 skills = await response.json();
+                console.log('Habilidades cargadas:', skills);
                 
-                // Obtener categorías únicas
-                categories = new Set(skills.map(skill => skill.categoria));
+                if (!Array.isArray(skills)) {
+                    console.error('La respuesta no es un array:', skills);
+                    throw new Error('Formato de respuesta inválido');
+                }
                 
                 // Mostrar las habilidades
                 mostrarHabilidades();
             } catch (error) {
-                console.error('Error:', error);
-                throw error;
+                console.error('Error al cargar habilidades:', error);
+                mostrarError(error.message || 'Error al cargar las habilidades');
             }
         }
 
@@ -314,45 +415,77 @@
                 return;
             }
             
-            // Ordenar habilidades por categoría
+            // Agrupar habilidades por categoría (en minúsculas para consistencia)
             const habilidadesPorCategoria = {};
             skills.forEach(skill => {
-                if (!habilidadesPorCategoria[skill.categoria]) {
-                    habilidadesPorCategoria[skill.categoria] = [];
+                const categoria = skill.categoria.toLowerCase();
+                if (!habilidadesPorCategoria[categoria]) {
+                    habilidadesPorCategoria[categoria] = [];
                 }
-                habilidadesPorCategoria[skill.categoria].push(skill);
+                habilidadesPorCategoria[categoria].push(skill);
             });
+
+            // Ordenar habilidades dentro de cada categoría
+            Object.keys(habilidadesPorCategoria).forEach(categoria => {
+                habilidadesPorCategoria[categoria].sort((a, b) => 
+                    a.nombre.localeCompare(b.nombre, 'es', {sensitivity: 'base'})
+                );
+            });
+
+            // Orden de categorías deseado
+            const ordenCategorias = [
+                'frontend', 
+                'backend', 
+                'database', 
+                'devops', 
+                'mobile', 
+                'control de versiones',
+                'other'
+            ];
+
+            // Generar HTML para cada categoría en el orden definido
+            let html = '<div class="categories-container">';
             
-            // Generar el HTML para cada categoría
-            let html = '';
-            for (const [categoria, habilidades] of Object.entries(habilidadesPorCategoria)) {
+            // Primero las categorías en el orden definido
+            ordenCategorias.forEach(categoria => {
+                const habilidades = habilidadesPorCategoria[categoria];
+                if (!habilidades || habilidades.length === 0) return;
+
+                const categoryColor = getCategoryTextColorClass(categoria);
                 html += `
-                    <div class="col-span-full mt-6 mb-3">
-                        <h2 class="text-lg font-medium text-gray-700">${formatearCategoria(categoria)}</h2>
-                    </div>
+                    <div class="category-section">
+                        <div class="category-header">
+                            <h2 class="text-lg font-semibold ${categoryColor} flex items-center gap-2">
+                                <i class="${getCategoryHeaderIcon(categoria)} text-xl"></i>
+                                <span>${formatearCategoria(categoria)}</span>
+                            </h2>
+                        </div>
+                        <div class="skills-scroll-container">
+                            <div class="skills-row">
                 `;
                 
                 // Agregar habilidades de esta categoría
                 habilidades.forEach(skill => {
                     html += `
-                        <div class="skill-card">
-                            <div class="absolute top-2 right-2">
-                                <span class="${getCategoryColorClass(categoria)} text-[10px] font-medium px-2 py-0.5 rounded-full">
-                                    ${categoria}
-                                </span>
-                            </div>
-                            <div class="flex flex-col items-center justify-center flex-grow">
-                                <div class="w-12 h-12 rounded-full bg-opacity-10 ${getCategoryTextColorClass(categoria).replace('text-', 'bg-')} flex items-center justify-center mb-3">
-                                    <i class="${getSkillIcon(skill.nombre, categoria)} text-xl ${getCategoryTextColorClass(categoria)}"></i>
+                        <div class="skill-card" style="border-top: 4px solid ${getCategoryColorValue(categoria)};">
+                            <div class="flex flex-col items-center justify-center h-full w-full">
+                                <div class="w-8 h-8 rounded-full bg-opacity-10 ${getCategoryTextColorClass(categoria).replace('text-', 'bg-')} flex items-center justify-center mb-1">
+                                    <i class="${getSkillIcon(skill.nombre, categoria)} text-base ${getCategoryTextColorClass(categoria)}"></i>
                                 </div>
-                                <h3 class="text-base font-medium text-gray-800 mb-1">${skill.nombre}</h3>
-                                <p class="text-xs text-gray-500">${getSkillDescription(skill.nombre, categoria)}</p>
+                                <h3 class="text-center font-medium text-gray-800 text-xs truncate w-full">${skill.nombre}</h3>
                             </div>
                         </div>
                     `;
                 });
-            }
+                
+                // Cerrar el contenedor de la categoría
+                html += `
+                        </div>
+                    </div>
+                `;
+            });
             
+            // Agregar el HTML a la página
             skillsGrid.innerHTML = html;
         }
         
@@ -481,50 +614,45 @@
             return `fa-solid fa-${defaultIcon}`;
         }
         
-        // Función para obtener descripción de la habilidad
-        function getSkillDescription(skillName, category) {
-            const lowerSkill = skillName.toLowerCase();
-            const categoryLower = category.toLowerCase();
-            
-            // Ejemplos de descripciones por categoría
-            const descriptions = {
-                'frontend': 'Desarrollo de interfaces de usuario',
-                'backend': 'Desarrollo del lado del servidor',
-                'database': 'Gestión de bases de datos',
-                'devops': 'Operaciones y despliegue',
-                'mobile': 'Desarrollo móvil',
-                'control de versiones': 'Control de versiones',
-                'other': 'Otra habilidad técnica'
+        // Función para obtener el ícono del encabezado de categoría
+        
+        // Función para obtener el ícono del encabezado de categoría
+        function getCategoryHeaderIcon(category) {
+            const icons = {
+                'frontend': 'fa-laptop-code',
+                'backend': 'fa-server',
+                'database': 'fa-database',
+                'devops': 'fa-network-wired',
+                'mobile': 'fa-mobile-screen',
+                'control de versiones': 'fa-code-branch',
+                'other': 'fa-code'
             };
-            
-            // Descripciones específicas para habilidades conocidas
-            const specificDescriptions = {
-                'react': 'Biblioteca de JavaScript para interfaces de usuario',
-                'javascript': 'Lenguaje de programación',
-                'python': 'Lenguaje de programación',
-                'django': 'Framework web de Python',
-                'node': 'Entorno de ejecución de JavaScript',
-                'express': 'Framework web para Node.js',
-                'mongodb': 'Base de datos NoSQL',
-                'mysql': 'Sistema de gestión de bases de datos relacional',
-                'docker': 'Plataforma de contenedores',
-                'git': 'Sistema de control de versiones'
+            const icon = icons[category.toLowerCase()] || icons['other'];
+            return `fa-solid ${icon}`;
+        }
+        
+        // Función para obtener el valor de color de la categoría
+        function getCategoryColorValue(category) {
+            const colors = {
+                'frontend': '#3b82f6',    // azul-500
+                'backend': '#10b981',     // verde-500
+                'database': '#8b5cf6',    // violeta-500
+                'devops': '#f59e0b',      // amarillo-500
+                'mobile': '#ef4444',      // rojo-500
+                'control de versiones': '#6b7280', // gris-500
+                'other': '#9ca3af'        // gris-400
             };
-            
-            // Buscar descripción específica
-            for (const [key, desc] of Object.entries(specificDescriptions)) {
-                if (lowerSkill.includes(key)) {
-                    return desc;
-                }
-            }
-            
-            // Devolver descripción por categoría
-            return descriptions[categoryLower] || 'Habilidad técnica';
+            return colors[category.toLowerCase()] || colors['other'];
         }
         
         // Función para mostrar mensajes de error
         function mostrarError(mensaje) {
+            console.error('Mostrando error:', mensaje);
             const skillsGrid = document.getElementById('skillsGrid');
+            if (!skillsGrid) {
+                console.error('No se encontró el elemento con id="skillsGrid"');
+                return;
+            }
             skillsGrid.innerHTML = `
                 <div class="col-span-full text-center py-10">
                     <i class="fas fa-exclamation-circle text-4xl text-red-500 mb-4"></i>
