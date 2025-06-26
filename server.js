@@ -8,9 +8,16 @@ const proyectosRoutes = require('./back/routes/routers.proyectos/proyectos.route
 const datosPersonalesRoutes = require('./back/routes/routers.datosPerosnales');
 const { errorHandler, notFoundHandler } = require('./back/middlewares/error.middleware');
 const { logger, errorLogger } = require('./back/middlewares/logger.middleware');
+const skillsRoutes = require('./back/routes/routers.skills/skills.routers'); // Importando el router de skills
 
 // Inicializar la aplicación Express
 const app = express();
+
+// Configuración de archivos estáticos
+app.use(express.static(path.join(__dirname, 'src')));  // Servir archivos estáticos del directorio src
+
+// Middleware para parsear JSON
+app.use(express.json());
 const PORT = process.env.PORT || 3001;
 
 // Configuración de CORS
@@ -25,7 +32,6 @@ const corsOptions = {
 // Middleware básico
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
-app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Middleware de logging
@@ -90,65 +96,12 @@ app.use('/api/datos-personales', require('./back/routes/routers.datosPerosnales/
 // Rutas de proyectos
 app.use('/api/proyectos', proyectosRoutes);
 
-// Ruta de bienvenida
-app.get('/', (req, res) => {
-    // Puedes redirigir a un dashboard o página de inicio
-    res.send(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Portafolio - Inicio</title>
-            <style>
-                body { 
-                    font-family: Arial, sans-serif; 
-                    display: flex; 
-                    justify-content: center; 
-                    align-items: center; 
-                    height: 100vh; 
-                    margin: 0; 
-                    background-color: #f5f5f5;
-                }
-                .container { 
-                    text-align: center; 
-                    padding: 2rem; 
-                    background: white; 
-                    border-radius: 8px; 
-                    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-                }
-                h1 { 
-                    color: #333; 
-                    margin-bottom: 2rem;
-                }
-                .nav-links { 
-                    display: flex; 
-                    gap: 1rem; 
-                    justify-content: center;
-                }
-                .nav-link { 
-                    display: inline-block; 
-                    padding: 0.8rem 1.5rem; 
-                    background-color: #4CAF50; 
-                    color: white; 
-                    text-decoration: none; 
-                    border-radius: 4px; 
-                    transition: background-color 0.3s;
-                }
-                .nav-link:hover { 
-                    background-color: #45a049; 
-                }
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <h1>Bienvenido al Portafolio</h1>
-                <div class="nav-links">
-                    <a href="/DatosPersonales/viewDP.html" class="nav-link">Datos Personales</a>
-                    <a href="/Proyectos/viewP.html" class="nav-link">Proyectos</a>
-                </div>
-            </div>
-        </body>
-        </html>
-    `);
+// Rutas de skills
+app.use('/api/skills', skillsRoutes);
+
+// Ruta para servir la vista de skills
+app.get('/Skills/viewS.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'src/Skills/viewS.html'));
 });
 
 // Manejador para rutas no encontradas (debe ir al final)
